@@ -18,6 +18,7 @@ from app.workflow.parallel import ParallelResearcher, get_parallel_researcher
 from app.workflow.planner import Planner, get_planner
 from app.workflow.retry import RetryCoordinator, get_retry_coordinator
 from app.workflow.state import ResearchState, create_initial_research_state
+from app.workflow.writer import Writer, get_writer
 
 logger = logging.getLogger("researchops.graph")
 
@@ -29,14 +30,15 @@ def create_research_graph(
     retry_coordinator: Optional[RetryCoordinator] = None,
     gap_detector: Optional[GapDetector] = None,
     comparer: Optional[Comparer] = None,
+    writer: Optional[Writer] = None,
 ) -> CompiledStateGraph:
-    """Construct and compile the LangGraph research pipeline with Checker, Retry Loop, Gaps, and Comparer.
+    """Construct and compile the LangGraph research pipeline with Checker, Retries, Gaps, Comparer, and Writer.
 
     Connects:
         START -> planner -> parallel_research -> checker
         checker -> [should_retry?]
             YES -> retry_research -> checker (loop)
-            NO  -> detect_gaps -> comparer -> END
+            NO  -> detect_gaps -> comparer -> writer -> END
     """
     _planner = planner or get_planner()
     _parallel_researcher = parallel_researcher or get_parallel_researcher()
@@ -44,6 +46,7 @@ def create_research_graph(
     _retry_coordinator = retry_coordinator or get_retry_coordinator(parallel_researcher=_parallel_researcher)
     _gap_detector = gap_detector or get_gap_detector()
     _comparer = comparer or get_comparer()
+    _writer = writer or get_writer(comparer=_comparer)
 
     async def planner_node(state: ResearchState) -> dict:
         """Execute strategic planning to generate structured research jobs."""
@@ -120,6 +123,15 @@ def create_research_graph(
             "workflow_status": "compared",
         }
 
+    async def writer_node(state: ResearchState) -> dict:
+        """Generate final comprehensive synthesized research report."""
+        logger.info("[Workflow] Starting writer node for run %s", state["research_id"])
+        report = await _writer.generate_report(state)
+        return {
+            "report": report,
+            "workflow_status": "completed",
+        }
+
     def route_after_checker(state: ResearchState) -> str:
         """Deterministic conditional router deciding between retry loop and gap detection."""
         if _retry_coordinator.should_retry(state):
@@ -135,6 +147,7 @@ def create_research_graph(
     builder.add_node("retry_research", retry_node)
     builder.add_node("detect_gaps", gaps_node)
     builder.add_node("comparer", comparer_node)
+    builder.add_node("writer", writer_node)
 
     builder.add_edge(START, "planner")
     builder.add_edge("planner", "parallel_research")
@@ -149,7 +162,8 @@ def create_research_graph(
     )
     builder.add_edge("retry_research", "checker")
     builder.add_edge("detect_gaps", "comparer")
-    builder.add_edge("comparer", END)
+    builder.add_edge("comparer", "writer")
+    builder.add_edge("writer", END)
 
     return builder.compile()
 
@@ -163,6 +177,7 @@ async def run_research_pipeline(
     retry_coordinator: Optional[RetryCoordinator] = None,
     gap_detector: Optional[GapDetector] = None,
     comparer: Optional[Comparer] = None,
+    writer: Optional[Writer] = None,
 ) -> ResearchState:
     """Execute the end-to-end research pipeline for a given business question.
 
@@ -175,9 +190,10 @@ async def run_research_pipeline(
         retry_coordinator: Optional custom RetryCoordinator instance.
         gap_detector: Optional custom GapDetector instance.
         comparer: Optional custom Comparer instance.
+        writer: Optional custom Writer instance.
 
     Returns:
-        The final populated ResearchState containing verified jobs, facts, sources, gaps, and comparison.
+        The final populated ResearchState containing verified jobs, facts, sources, gaps, comparison, and report.
     """
     run_id = research_id or f"run-{uuid.uuid4().hex[:12]}"
     initial_state = create_initial_research_state(run_id, question)
@@ -189,12 +205,13 @@ async def run_research_pipeline(
         retry_coordinator=retry_coordinator,
         gap_detector=gap_detector,
         comparer=comparer,
+        writer=writer,
     )
     logger.info("Executing research graph for question: '%s' (Run ID: %s)", question, run_id)
 
     final_state: ResearchState = await graph.ainvoke(initial_state)
     logger.info(
-        "Research graph finished (Run ID: %s, Status: %s): %d jobs, %d facts, %d sources, %d verification results, %d conflicts, %d gaps, comparison matrix %s",
+        "Research graph finished (Run ID: %s, Status: %s): %d jobs, %d facts, %d sources, %d verification results, %d conflicts, %d gaps, comparison: %s, report: %s",
         run_id,
         final_state.get("workflow_status"),
         len(final_state.get("research_jobs", [])),
@@ -204,6 +221,7 @@ async def run_research_pipeline(
         len(final_state.get("conflicts", [])),
         len(final_state.get("gaps", [])),
         "present" if final_state.get("comparison") is not None else "absent",
+        "present" if final_state.get("report") is not None else "absent",
     )
     return final_state
 

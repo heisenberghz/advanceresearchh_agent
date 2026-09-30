@@ -24,6 +24,7 @@ from app.workflow.conflicts import ConflictDetector, ConflictType, get_conflict_
 from app.workflow.retry import RetryCoordinator, get_retry_coordinator
 from app.workflow.gaps import GapDetector, get_gap_detector
 from app.workflow.comparer import Comparer, get_comparer
+from app.workflow.writer import Writer, get_writer
 from app.workflow.trust import (
     TrustEvaluation,
     TrustRulesConfig,
@@ -55,6 +56,8 @@ __all__ = [
     "get_gap_detector",
     "Comparer",
     "get_comparer",
+    "Writer",
+    "get_writer",
     "TrustRulesConfig",
     "TrustScoreBreakdown",
     "TrustEvaluation",
