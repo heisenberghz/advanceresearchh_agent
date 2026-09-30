@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Calendar,
   ShieldCheck,
-  Printer,
-  Sparkles,
   FileDown,
 } from "lucide-react";
 import { marked } from "marked";
@@ -47,53 +45,53 @@ export const ReportView: React.FC<ReportViewProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 sm:py-10">
       {/* Top Navigation & Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b-2 border-black">
         <button
           onClick={onBackToDashboard}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 transition self-start font-medium"
+          className="neo-btn-secondary text-xs sm:text-xs py-1.5 px-3 self-start"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Back to Findings Studio</span>
         </button>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* View Toggle */}
-          <div className="bg-slate-100 p-0.5 rounded-lg border border-slate-200/70 flex items-center text-xs">
+          <div className="border-2 border-black rounded-lg p-0.5 bg-white flex items-center shadow-[2px_2px_0px_#000000]">
             <button
               onClick={() => setViewMode("rendered")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+              className={`px-3 py-1 font-mono text-xs font-bold rounded transition ${
                 viewMode === "rendered"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#FFE600] text-black border border-black shadow-[1px_1px_0px_#000000]"
+                  : "text-black hover:bg-slate-100"
               }`}
             >
-              Executive Report
+              Report
             </button>
             <button
               onClick={() => setViewMode("raw")}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+              className={`px-3 py-1 font-mono text-xs font-bold rounded transition ${
                 viewMode === "raw"
-                  ? "bg-white text-slate-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#FFE600] text-black border border-black shadow-[1px_1px_0px_#000000]"
+                  : "text-black hover:bg-slate-100"
               }`}
             >
-              Raw Markdown
+              Raw MD
             </button>
           </div>
 
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="btn-command-secondary text-xs px-3 py-1.5"
+            className="neo-btn-secondary text-xs sm:text-xs py-1.5 px-3"
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-700">Copied</span>
+                <Check className="w-3.5 h-3.5 stroke-[3] text-black" />
+                <span>Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Copy</span>
               </>
             )}
@@ -103,9 +101,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <a
             href={exportUrl}
             download={`research_report_${report.research_run_id}.md`}
-            className="btn-command-secondary text-xs px-3 py-1.5"
+            className="neo-btn-secondary text-xs sm:text-xs py-1.5 px-3"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <Download className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Markdown</span>
           </a>
 
@@ -115,34 +113,34 @@ export const ReportView: React.FC<ReportViewProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             download={`research_report_${report.research_run_id}.pdf`}
-            className="btn-command-primary text-xs px-3.5 py-1.5"
+            className="neo-btn-primary text-xs sm:text-xs py-1.5 px-3.5"
           >
-            <FileDown className="w-3.5 h-3.5" />
+            <FileDown className="w-4 h-4 stroke-[2.5]" />
             <span>Download PDF</span>
           </a>
         </div>
       </div>
 
       {/* Main Dossier Container */}
-      <div className="precision-card p-6 sm:p-10 mb-8 bg-white shadow-sm">
+      <div className="neo-box p-6 sm:p-10 mb-8 bg-white">
         {/* Report Metadata Header */}
-        <div className="mb-8 pb-6 border-b border-slate-100">
+        <div className="mb-8 pb-6 border-b-2 border-black">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+            <span className="neo-stamp neo-stamp-green">
               Ground-Truth Verified
             </span>
-            <span className="text-xs font-mono text-slate-400">
-              run: {report.research_run_id}
+            <span className="neo-stamp neo-stamp-white font-mono">
+              RUN: {report.research_run_id}
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-950 tracking-tight leading-snug mb-3">
+          <h1 className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-snug mb-3 uppercase">
             {report.title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 font-mono">
+          <div className="flex flex-wrap items-center gap-4 text-xs font-mono font-bold text-black">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <Calendar className="w-4 h-4 stroke-[2.5]" />
               <span>
                 {new Date(report.created_at || Date.now()).toLocaleDateString(undefined, {
                   month: "short",
@@ -152,8 +150,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-slate-700 font-medium">Deterministic Cross-Verification</span>
+              <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+              <span>Deterministic Cross-Verification</span>
             </div>
           </div>
         </div>
@@ -165,18 +163,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         ) : (
-          <pre className="bg-slate-950 text-slate-100 p-5 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed border border-slate-800">
+          <pre className="bg-black text-[#4ADE80] p-5 rounded-lg border-2 border-black overflow-x-auto text-xs font-mono leading-relaxed shadow-[3px_3px_0px_#000000]">
             {markdownContent}
           </pre>
         )}
       </div>
 
       {/* Bottom Footer Actions */}
-      <div className="flex items-center justify-between text-xs text-slate-500 pb-8 font-mono">
-        <span>ResearchOps Intelligence Workbench</span>
+      <div className="flex items-center justify-between text-xs font-mono font-bold text-black pb-8">
+        <span>RESEARCH OPS // AUTONOMOUS AGENT</span>
         <button
           onClick={onNewResearch}
-          className="text-slate-900 hover:underline font-semibold"
+          className="neo-btn-primary text-xs sm:text-xs py-1.5 px-3"
         >
           Initialize New Research Run
         </button>

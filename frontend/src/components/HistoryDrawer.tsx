@@ -25,29 +25,31 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-md bg-white h-full shadow-xl border-l border-gray-200 p-5 flex flex-col z-10 animate-in slide-in-from-right duration-150">
-        <div className="flex items-center justify-between pb-3.5 border-b border-gray-100 mb-3.5">
+      <div className="relative w-full max-w-md bg-[#FAF9F5] h-full border-l-[3px] border-black shadow-[-6px_0px_0px_#000000] p-5 sm:p-6 flex flex-col z-10 animate-in slide-in-from-right duration-150">
+        <div className="flex items-center justify-between pb-4 border-b-2 border-black mb-4">
           <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-gray-500" />
-            <h2 className="text-sm font-semibold text-gray-900">
-              Previous research
+            <div className="w-7 h-7 rounded bg-[#FFE600] border-2 border-black flex items-center justify-center shadow-[1.5px_1.5px_0px_#000000]">
+              <History className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <h2 className="font-mono font-black text-sm uppercase text-black tracking-tight">
+              Previous Research ({runs.length})
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition"
+            className="w-8 h-8 rounded border-2 border-black bg-white hover:bg-slate-100 flex items-center justify-center transition shadow-[2px_2px_0px_#000000]"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[3]" />
           </button>
         </div>
 
         {/* Runs List */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
           {runs && runs.length > 0 ? (
             runs.map((r) => {
               const isSelected = r.id === currentRunId;
@@ -58,44 +60,44 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     onSelectRun(r.id);
                     onClose();
                   }}
-                  className={`p-3 rounded-lg border cursor-pointer transition flex flex-col justify-between ${
+                  className={`p-3.5 rounded-lg border-2 border-black cursor-pointer transition-all flex flex-col justify-between ${
                     isSelected
-                      ? "bg-blue-50/60 border-blue-300 ring-1 ring-blue-300"
-                      : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/60"
+                      ? "bg-[#FEF9C3] shadow-[4px_4px_0px_#000000] translate-x-[-1px] translate-y-[-1px]"
+                      : "bg-white hover:bg-[#FEF9C3] shadow-[3px_3px_0px_#000000] hover:shadow-[5px_5px_0px_#000000] hover:translate-x-[-1px] hover:translate-y-[-1px]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-400">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono text-[11px] font-bold text-slate-700">
                       {r.created_at ? new Date(r.created_at).toLocaleDateString() : "Recent"}
                     </span>
                     <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                      className={`neo-stamp ${
                         r.status === "completed"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          ? "neo-stamp-green"
                           : r.status === "failed"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-gray-100 text-gray-700 border-gray-200"
+                          ? "neo-stamp-red"
+                          : "neo-stamp-yellow"
                       }`}
                     >
                       {r.status}
                     </span>
                   </div>
 
-                  <p className="text-xs font-medium text-gray-900 line-clamp-2 mb-2">
+                  <p className="text-xs sm:text-sm font-bold text-black line-clamp-2 mb-2.5">
                     {r.question}
                   </p>
 
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span className="text-[11px] text-gray-400">ID: {r.id.slice(0, 8)}...</span>
-                    <span className="text-gray-900 font-medium">
-                      Open
+                  <div className="flex items-center justify-between font-mono text-xs font-bold text-slate-600 pt-1 border-t border-slate-200">
+                    <span className="text-[11px]">RUN: {r.id.slice(0, 10)}</span>
+                    <span className="text-black font-black underline">
+                      Open Dossier
                     </span>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="text-center py-12 text-gray-400 text-xs">
+            <div className="text-center py-16 font-mono text-xs font-bold text-slate-500 border-2 border-dashed border-black rounded-lg p-6 bg-white">
               No previous research runs recorded yet.
             </div>
           )}
@@ -104,5 +106,3 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
     </div>
   );
 };
-
-
