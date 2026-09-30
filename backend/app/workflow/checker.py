@@ -18,8 +18,14 @@ from app.models.conflict import CompetingValue, Conflict
 from app.models.enums import ConflictStatus, TrustTag, VerificationStatus
 from app.models.fact import Fact, VerificationResult
 from app.models.source import Source
+from app.workflow.trust import (
+    TrustRulesConfig,
+    TrustScoreBreakdown,
+    evaluate_trust,
+)
 
 logger = logging.getLogger("researchops.checker")
+
 
 # High-credibility and authoritative domains
 AUTHORITATIVE_DOMAINS: Set[str] = {
@@ -103,8 +109,14 @@ class Checker:
     6. Inter-fact contradiction / conflict detection.
     """
 
-    def __init__(self, openrouter_client: Optional[OpenRouterClient] = None):
+    def __init__(
+        self,
+        openrouter_client: Optional[OpenRouterClient] = None,
+        trust_config: Optional[TrustRulesConfig] = None,
+    ):
         self.openrouter_client = openrouter_client
+        self.trust_config = trust_config or TrustRulesConfig()
+
 
     def evaluate_source_quality(self, entity: str, source: Source) -> Tuple[float, bool]:
         """Compute authority score (0.0 - 1.0) and whether it is the official primary domain."""
@@ -149,7 +161,8 @@ class Checker:
             return 0.40
 
         # No publication timestamp, but recently retrieved from web search
-        return 0.65
+        return 0.75
+
 
     def check_evidence_grounding(self, fact: Fact) -> Tuple[bool, float, str]:
         """Verify whether preserved evidence snippets corroborate the fact value."""
@@ -307,41 +320,10 @@ class Checker:
             if s_id in sources_map:
                 valid_sources.append(sources_map[s_id])
 
-        if not valid_sources:
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.UNSUPPORTED,
-                trust_tag=TrustTag.RED,
-                reason="Unsupported claim: Cited source record is missing or not found in verified registry.",
-                supporting_sources=[],
-                conflicts=conflict_ids,
-            )
-
         # 2. Evidence grounding check
         is_grounded, ground_score, ground_note = self.check_evidence_grounding(fact)
-        if not is_grounded:
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.UNSUPPORTED,
-                trust_tag=TrustTag.RED,
-                reason=f"Unsupported claim: {ground_note}.",
-                supporting_sources=[s.id for s in valid_sources],
-                conflicts=conflict_ids,
-            )
 
-        # 3. Conflict presence check
-        if conflicts:
-            conflict_descs = "; ".join(c.description for c in conflicts)
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.CONFLICTING,
-                trust_tag=TrustTag.YELLOW,
-                reason=f"Conflicting claims detected: {conflict_descs}. Contradiction preserved.",
-                supporting_sources=[s.id for s in valid_sources],
-                conflicts=conflict_ids,
-            )
-
-        # 4. Source Quality and Primary Domain Evaluation
+        # 3. Source Quality and Primary Domain Evaluation
         domains: Set[str] = set()
         has_primary_official = False
         quality_scores: List[float] = []
@@ -360,61 +342,34 @@ class Checker:
         corroboration_count = len(domains)
         primary_domain = next(iter(domains)) if domains else "unknown"
 
-        # 5. Deterministic Trust Rule Classification
-        # Case A: Official primary domain (e.g. zoho.com for Zoho) -> GREEN
-        if has_primary_official:
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.VERIFIED,
-                trust_tag=TrustTag.GREEN,
-                reason=(
-                    f"Verified: Substantiated by official primary source ({primary_domain}) "
-                    f"with direct evidence match."
-                ),
-                supporting_sources=[s.id for s in valid_sources],
-                conflicts=[],
-            )
+        # 4. Construct inspectable breakdown & evaluate deterministic trust rules
+        breakdown = TrustScoreBreakdown(
+            source_exists=bool(valid_sources),
+            evidence_grounded=is_grounded,
+            grounding_score=ground_score,
+            source_quality=avg_quality,
+            freshness=freshness_score,
+            corroboration_count=corroboration_count,
+            has_conflict=bool(conflicts),
+            is_primary_official=has_primary_official,
+            primary_domain=primary_domain,
+            conflict_summary="; ".join(c.description for c in conflicts) if conflicts else None,
+        )
 
-        # Case B: Multi-source corroboration (>= 2 distinct domains) + high credibility/freshness -> GREEN
-        if corroboration_count >= 2 and (avg_quality >= 0.70 or freshness_score >= 0.70):
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.VERIFIED,
-                trust_tag=TrustTag.GREEN,
-                reason=(
-                    f"Verified: Corroborated across {corroboration_count} independent sources "
-                    f"({', '.join(sorted(domains))}) with strong credibility."
-                ),
-                supporting_sources=[s.id for s in valid_sources],
-                conflicts=[],
-            )
+        evaluation = evaluate_trust(breakdown, self.trust_config)
 
-        # Case C: Single source, but high quality/authoritative (e.g. Reuters, SEC, Gartner) -> GREEN
-        if avg_quality >= 0.80 and freshness_score >= 0.70:
-            return VerificationResult(
-                fact_id=fact.id,
-                status=VerificationStatus.VERIFIED,
-                trust_tag=TrustTag.GREEN,
-                reason=(
-                    f"Verified: Directly supported by authoritative publisher ({primary_domain}) "
-                    f"with verified evidence excerpt."
-                ),
-                supporting_sources=[s.id for s in valid_sources],
-                conflicts=[],
-            )
+        # Only cite supporting sources if source exists and is grounded
+        supporting = [s.id for s in valid_sources] if (valid_sources and is_grounded) else []
 
-        # Case D: Single secondary source or moderate authority -> YELLOW
         return VerificationResult(
             fact_id=fact.id,
-            status=VerificationStatus.UNCERTAIN,
-            trust_tag=TrustTag.YELLOW,
-            reason=(
-                f"Uncertain: Single secondary source citation ({primary_domain}) "
-                f"lacking multi-source corroboration."
-            ),
-            supporting_sources=[s.id for s in valid_sources],
-            conflicts=[],
+            status=evaluation.status,
+            trust_tag=evaluation.trust_tag,
+            reason=evaluation.reason,
+            supporting_sources=supporting,
+            conflicts=conflict_ids,
         )
+
 
     def check_all(
         self,
@@ -468,6 +423,7 @@ class Checker:
         )
 
 
-def get_checker() -> Checker:
+def get_checker(trust_config: Optional[TrustRulesConfig] = None) -> Checker:
     """Factory creating default Checker instance."""
-    return Checker()
+    return Checker(trust_config=trust_config)
+

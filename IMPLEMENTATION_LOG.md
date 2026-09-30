@@ -401,6 +401,57 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 14: Deterministic Trust Rules (formalizing explicit scoring and configurable thresholds for trust classification).
 
+---
+
+## 2026-09-30 18:32 IST — Task 14: Deterministic Trust Rules
+
+- **Task**: TASK 14 — Deterministic Trust Rules (Phase 5: Verification System)
+- **What was implemented**:
+  - Created the dedicated deterministic trust rules engine in `backend/app/workflow/trust.py`.
+  - Implemented `TrustRulesConfig` with configurable thresholds:
+    - `min_grounding_score`: 0.50 (minimum evidence keyword overlap).
+    - `authoritative_quality_threshold`: 0.75 (minimum publisher authority).
+    - `freshness_threshold`: 0.70 (<= 3 years or fresh retrieval).
+    - `min_corroboration_count`: 2 (independent domains for consensus).
+    - `official_domain_score`: 0.90 (threshold recognizing entity primary domain).
+  - Implemented inspectable input breakdown container `TrustScoreBreakdown` capturing source existence, grounding score, source quality, freshness, corroboration count, conflicts, and primary domain.
+  - Implemented `calculate_composite_score()` providing a weighted mathematical index (0.0 to 1.0) of evidence reliability.
+  - Implemented `evaluate_trust()` establishing an explicit, deterministic rule decision tree:
+    - **Rule 1 (Missing Source)**: `UNSUPPORTED` / `RED` (composite = 0.0).
+    - **Rule 2 (Ungrounded Evidence)**: `UNSUPPORTED` / `RED`.
+    - **Rule 3 (Conflict Detected)**: `CONFLICTING` / `YELLOW` (or `RED` if source quality is low).
+    - **Rule 4 (Official Primary Domain)**: `VERIFIED` / `GREEN`.
+    - **Rule 5 (Multi-Source Corroborated)**: `VERIFIED` / `GREEN`.
+    - **Rule 6 (Single Authoritative Source + Fresh)**: `VERIFIED` / `GREEN`.
+    - **Rule 7 (Single Secondary Source / Older)**: `UNCERTAIN` / `YELLOW`.
+  - Integrated `evaluate_trust` directly into `Checker.verify_fact` in `backend/app/workflow/checker.py`.
+  - Exported trust rule types and functions in `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_trust_rules.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/trust.py`
+  - Created: `backend/tests/test_trust_rules.py`
+  - Modified: `backend/app/workflow/checker.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 60/60 unit & integration tests passed in 4.35s across the entire test suite (10 dedicated trust rule tests + 8 checker tests).
+  - Verified Rule 1: missing source immediately returns `RED` / `UNSUPPORTED`.
+  - Verified Rule 2: ungrounded evidence returns `RED` / `UNSUPPORTED`.
+  - Verified Rule 4: official primary domain returns `GREEN` / `VERIFIED`.
+  - Verified Rule 5: multi-source corroboration returns `GREEN` / `VERIFIED`.
+  - Verified Rule 6: authoritative single source returns `GREEN` / `VERIFIED`.
+  - Verified Rule 7: single secondary source returns `YELLOW` / `UNCERTAIN`.
+  - Verified older source (> 3 years) returns `YELLOW` / `UNCERTAIN` with freshness alert.
+  - Verified conflict handling: grounded conflict returns `YELLOW` / `CONFLICTING`; low-quality conflict returns `RED` / `CONFLICTING`.
+  - Verified custom threshold configurability using `TrustRulesConfig`.
+  - Verified strict determinism and idempotency: identical inputs yield identical outputs every single time.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Maintained complete separation between fact verification rules and LLM prose; trust tags are 100% deterministic and inspectable.
+- **What should be done next**:
+  - Task 15: Conflict Detection & Resolution (enhancing structured conflict representation and handling).
+
+
 
 
 

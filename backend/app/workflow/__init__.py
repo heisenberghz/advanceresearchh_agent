@@ -20,6 +20,13 @@ from app.workflow.state import (
     reduce_sources,
 )
 from app.workflow.checker import Checker, CheckerBatchResult, get_checker
+from app.workflow.trust import (
+    TrustEvaluation,
+    TrustRulesConfig,
+    TrustScoreBreakdown,
+    calculate_composite_score,
+    evaluate_trust,
+)
 from app.workflow.graph import create_research_graph, run_research_pipeline
 
 __all__ = [
@@ -35,6 +42,11 @@ __all__ = [
     "Checker",
     "CheckerBatchResult",
     "get_checker",
+    "TrustRulesConfig",
+    "TrustScoreBreakdown",
+    "TrustEvaluation",
+    "calculate_composite_score",
+    "evaluate_trust",
     "ResearchState",
     "create_initial_research_state",
     "merge_unique_strings",
@@ -49,4 +61,5 @@ __all__ = [
     "create_research_graph",
     "run_research_pipeline",
 ]
+
 
