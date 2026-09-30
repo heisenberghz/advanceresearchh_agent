@@ -1,11 +1,15 @@
-"""Repository layer for persisting research runs, jobs, facts, sources, and reports."""
-
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from app.db.client import DatabaseClient, get_supabase_client
 
 logger = logging.getLogger("researchops.repository")
+
+
+def _serialize_for_db(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure all nested values, datetimes, and enums are JSON/Postgres compatible."""
+    return json.loads(json.dumps(record, default=str))
 
 
 class ResearchRepository:
@@ -52,7 +56,7 @@ class ResearchRepository:
 
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("research_runs").insert(record).execute()
+                res = self.db.raw_client.table("research_runs").insert(_serialize_for_db(record)).execute()
                 return res.data[0] if res.data else record
             except Exception as exc:
                 logger.error("Failed to insert research run to Supabase: %s", str(exc))
@@ -114,7 +118,7 @@ class ResearchRepository:
             try:
                 res = (
                     self.db.raw_client.table("research_runs")
-                    .update(updates)
+                    .update(_serialize_for_db(updates))
                     .eq("id", run_id)
                     .execute()
                 )
@@ -140,7 +144,7 @@ class ResearchRepository:
 
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("research_jobs").upsert(job_data).execute()
+                res = self.db.raw_client.table("research_jobs").upsert(_serialize_for_db(job_data)).execute()
                 return res.data[0] if res.data else job_data
             except Exception as exc:
                 logger.error("Failed to save research job: %s", str(exc))
@@ -178,7 +182,7 @@ class ResearchRepository:
         source_data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("sources").upsert(source_data).execute()
+                res = self.db.raw_client.table("sources").upsert(_serialize_for_db(source_data)).execute()
                 return res.data[0] if res.data else source_data
             except Exception as exc:
                 logger.error("Failed to save source: %s", str(exc))
@@ -215,7 +219,7 @@ class ResearchRepository:
 
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("facts").upsert(fact_data).execute()
+                res = self.db.raw_client.table("facts").upsert(_serialize_for_db(fact_data)).execute()
                 return res.data[0] if res.data else fact_data
             except Exception as exc:
                 logger.error("Failed to save fact: %s", str(exc))
@@ -253,7 +257,7 @@ class ResearchRepository:
         conflict_data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("conflicts").upsert(conflict_data).execute()
+                res = self.db.raw_client.table("conflicts").upsert(_serialize_for_db(conflict_data)).execute()
                 return res.data[0] if res.data else conflict_data
             except Exception as exc:
                 logger.error("Failed to save conflict: %s", str(exc))
@@ -287,7 +291,7 @@ class ResearchRepository:
         gap_data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("research_gaps").upsert(gap_data).execute()
+                res = self.db.raw_client.table("research_gaps").upsert(_serialize_for_db(gap_data)).execute()
                 return res.data[0] if res.data else gap_data
             except Exception as exc:
                 logger.error("Failed to save research gap: %s", str(exc))
@@ -328,11 +332,18 @@ class ResearchRepository:
 
         if self.db.is_connected:
             try:
-                res = self.db.raw_client.table("reports").upsert(report_data).execute()
-                return res.data[0] if res.data else report_data
+                payload = {
+                    "id": report_data.get("id"),
+                    "research_run_id": report_data.get("research_run_id"),
+                    "content": _serialize_for_db(report_data),
+                    "created_at": report_data.get("created_at", now),
+                    "updated_at": report_data.get("updated_at", now),
+                }
+                res = self.db.raw_client.table("reports").upsert(_serialize_for_db(payload)).execute()
+                self._memory_reports[report_data["id"]] = report_data
+                return report_data
             except Exception as exc:
-                logger.error("Failed to save report: %s", str(exc))
-                raise RuntimeError(f"Database error saving report: {exc}") from exc
+                logger.error("Failed to save report to Supabase: %s", str(exc))
 
         self._memory_reports[report_data["id"]] = report_data
         return report_data
@@ -347,10 +358,18 @@ class ResearchRepository:
                     .eq("research_run_id", research_run_id)
                     .execute()
                 )
-                return res.data[0] if res.data else None
+                if res.data:
+                    row = res.data[0]
+                    content = row.get("content") or {}
+                    if isinstance(content, dict):
+                        content.setdefault("id", row.get("id"))
+                        content.setdefault("research_run_id", row.get("research_run_id"))
+                        content.setdefault("created_at", row.get("created_at"))
+                        content.setdefault("updated_at", row.get("updated_at"))
+                        return content
+                    return row
             except Exception as exc:
-                logger.error("Failed to retrieve report for %s: %s", research_run_id, str(exc))
-                raise RuntimeError(f"Database error reading report: {exc}") from exc
+                logger.error("Failed to retrieve report for %s from Supabase: %s", research_run_id, str(exc))
 
         for report in self._memory_reports.values():
             if report.get("research_run_id") == research_run_id:

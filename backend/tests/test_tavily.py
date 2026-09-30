@@ -11,12 +11,15 @@ from app.models.source import Source
 @pytest.mark.anyio
 async def test_unconfigured_tavily_raises_error():
     """Verify that calling Tavily without an API key raises a clear TavilyError."""
-    client = TavilyClient(api_key=None)
-    assert not client.is_configured
+    with patch("app.integrations.tavily.get_settings") as mock_settings:
+        mock_settings.return_value.tavily_api_key = ""
+        mock_settings.return_value.max_searches_per_job = 3
+        client = TavilyClient(api_key="")
+        assert not client.is_configured
 
-    with pytest.raises(TavilyError) as exc_info:
-        await client.search(query="Indian CRM market")
-    assert "TAVILY_API_KEY is not configured" in str(exc_info.value)
+        with pytest.raises(TavilyError) as exc_info:
+            await client.search(query="Indian CRM market")
+        assert "TAVILY_API_KEY is not configured" in str(exc_info.value)
 
 
 @pytest.mark.anyio

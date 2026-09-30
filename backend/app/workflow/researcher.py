@@ -24,8 +24,8 @@ logger = logging.getLogger("researchops.researcher")
 class RawFactItem(BaseModel):
     """Raw fact extracted by LLM from source snippets."""
 
-    entity: str = Field(description="The entity being described (e.g. company name)")
-    attribute: str = Field(description="The specific attribute or metric (e.g. Founded, Pricing, Revenue)")
+    entity: Optional[str] = Field(default=None, description="The entity being described (e.g. company name)")
+    attribute: Optional[str] = Field(default=None, description="The specific attribute or metric (e.g. Founded, Pricing, Revenue)")
     value: str = Field(description="The extracted factual value or claim")
     source_id: str = Field(description="The exact ID of the source supporting this fact")
     evidence_text: str = Field(description="Direct verbatim quote or excerpt from the snippet")
@@ -229,8 +229,8 @@ class Researcher:
                 Fact(
                     id=fact_id,
                     research_run_id=job.research_run_id,
-                    entity=item.entity.strip() or (job.entity or "Unknown"),
-                    attribute=item.attribute.strip() or (job.attribute or "Overview"),
+                    entity=(item.entity.strip() if item.entity else "") or (job.entity or "Unknown"),
+                    attribute=(item.attribute.strip() if item.attribute else "") or (job.attribute or "Overview"),
                     value=item.value.strip(),
                     source_ids=[cited_source.id],
                     evidence=[evidence],

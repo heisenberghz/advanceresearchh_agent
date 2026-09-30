@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import confetti from "canvas-confetti";
-import { ResearchReport, getExportMarkdownUrl } from "@/lib/api";
+import { ResearchReport, getExportMarkdownUrl, getExportPdfUrl } from "@/lib/api";
 
 interface ReportViewProps {
   report: ResearchReport;
@@ -55,6 +55,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   };
 
   const exportUrl = getExportMarkdownUrl(report.research_run_id);
+  const pdfExportUrl = getExportPdfUrl(report.research_run_id);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -115,10 +116,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <a
             href={exportUrl}
             download={`research_report_${report.research_run_id}.md`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export (.md)</span>
+          </a>
+
+          {/* Export PDF Button (Task 34) */}
+          <a
+            href={pdfExportUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={`research_report_${report.research_run_id}.pdf`}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition shadow-sm shadow-blue-500/20"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export (.md)</span>
+            <span>Export (.pdf)</span>
           </a>
         </div>
       </div>

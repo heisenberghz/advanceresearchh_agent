@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from app.db.repository import ResearchRepository, get_repository
@@ -89,6 +89,7 @@ class ResearchStatusResponse(BaseModel):
     conflicts: List[Dict[str, Any]] = Field(default_factory=list)
     gaps: List[Dict[str, Any]] = Field(default_factory=list)
     assumptions: List[str] = Field(default_factory=list)
+    comparison: Optional[Dict[str, Any]] = None
     has_report: bool = False
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -282,6 +283,10 @@ async def get_research_status(
 
     stage = snapshot.get("workflow_status") or run.get("status", "pending")
 
+    # Extract comparison matrix if present
+    comp = snapshot.get("comparison")
+    serialized_comp = _serialize_item(comp) if comp else None
+
     return ResearchStatusResponse(
         id=run["id"],
         research_id=run["id"],
@@ -295,6 +300,7 @@ async def get_research_status(
         conflicts=serialized_conflicts,
         gaps=serialized_gaps,
         assumptions=run.get("assumptions") or snapshot.get("assumptions") or [],
+        comparison=serialized_comp,
         has_report=has_report,
         created_at=run.get("created_at"),
         updated_at=run.get("updated_at"),
@@ -345,32 +351,6 @@ async def get_research_report(
 
     return serialized
 
-
-@router.get(
-    "/{research_id}/export/markdown",
-    response_class=PlainTextResponse,
-    summary="Export research report as Markdown document",
-    description="Downloads the completed research report as formatted GitHub-Flavored Markdown.",
-)
-async def export_markdown_report(
-    research_id: str,
-    repo: ResearchRepository = Depends(get_repository),
-) -> PlainTextResponse:
-    """Export the report as a downloadable .md file."""
-    report_dict = await get_research_report(research_id, repo)
-    md_content = report_dict.get("markdown_content", "")
-    if not md_content:
-        try:
-            rep_instance = ResearchReport.model_validate(report_dict)
-            md_content = rep_instance.to_markdown()
-        except Exception:
-            md_content = f"# Research Report for {research_id}\n\nNo formatted content available."
-
-    headers = {
-        "Content-Disposition": f'attachment; filename="research_report_{research_id}.md"',
-        "Content-Type": "text/markdown; charset=utf-8",
-    }
-    return PlainTextResponse(content=md_content, headers=headers)
 
 
 @router.get(
@@ -439,4 +419,99 @@ async def stream_research_events(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+# =============================================================================
+# Export Endpoints (Task 33 Markdown & Task 34 PDF)
+# =============================================================================
+
+@router.get(
+    "/{research_id}/export/markdown",
+    summary="Export research report as Markdown document (Task 33)",
+)
+async def export_research_markdown(
+    research_id: str,
+    repo: ResearchRepository = Depends(get_repository),
+):
+    """Export finalized research dossier as a downloadable Markdown (.md) document."""
+    report = repo.get_report(research_id)
+    snapshot = repo.get_state_snapshot(research_id) or {}
+    report_obj = snapshot.get("report")
+
+    markdown_text = None
+    if report and report.get("markdown_content"):
+        markdown_text = report["markdown_content"]
+    elif report_obj:
+        markdown_text = getattr(report_obj, "markdown_content", None) or getattr(report_obj, "to_markdown", lambda: str(report_obj))()
+    elif report:
+        title = report.get("title", "Research Report")
+        summary = report.get("executive_summary", "")
+        markdown_text = f"# {title}\n\n**Run ID:** `{research_id}`\n\n## 1. Executive Summary\n{summary}\n"
+
+    if not markdown_text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Report for research run '{research_id}' is not yet available for export.",
+        )
+
+    filename = f"research-report-{research_id}.md"
+    return Response(
+        content=markdown_text,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/{research_id}/export/pdf",
+    summary="Export research report as PDF document (Task 34)",
+)
+async def export_research_pdf(
+    research_id: str,
+    repo: ResearchRepository = Depends(get_repository),
+):
+    """Export finalized research dossier as a downloadable PDF document."""
+    from app.workflow.pdf_export import generate_pdf_report
+
+    report = repo.get_report(research_id)
+    snapshot = repo.get_state_snapshot(research_id) or {}
+    report_obj = snapshot.get("report")
+
+    report_dict = None
+    if report_obj and hasattr(report_obj, "model_dump"):
+        report_dict = report_obj.model_dump()
+    elif isinstance(report, dict):
+        report_dict = report
+    elif snapshot.get("report") and isinstance(snapshot["report"], dict):
+        report_dict = snapshot["report"]
+
+    if not report_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Report for research run '{research_id}' is not yet available for PDF export.",
+        )
+
+    # Attach comparison matrix from snapshot if available
+    if not report_dict.get("comparison"):
+        comp = snapshot.get("comparison")
+        if comp and hasattr(comp, "model_dump"):
+            report_dict["comparison"] = comp.model_dump()
+        elif isinstance(comp, dict):
+            report_dict["comparison"] = comp
+
+    try:
+        pdf_bytes = generate_pdf_report(report_dict)
+    except Exception as exc:
+        logger.error("Failed to generate PDF for %s: %s", research_id, str(exc), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate PDF document: {exc}",
+        ) from exc
+
+    filename = f"research-report-{research_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

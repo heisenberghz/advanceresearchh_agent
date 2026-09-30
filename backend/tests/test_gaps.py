@@ -156,7 +156,8 @@ def test_gap_detected_when_all_extracted_facts_are_unverified_or_red():
 
 def test_gap_persistence_in_repository():
     """Verify that GapDetector persists gaps into ResearchRepository and retrieves them cleanly."""
-    repo = ResearchRepository()
+    from app.db.client import DatabaseClient
+    repo = ResearchRepository(DatabaseClient(None))
     detector = GapDetector(repository=repo)
 
     gap = ResearchGap(

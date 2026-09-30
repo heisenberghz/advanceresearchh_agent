@@ -21,11 +21,14 @@ async def test_planner_rejects_empty_question():
 @pytest.mark.anyio
 async def test_planner_heuristic_decomposition():
     """Verify Planner heuristic generator produces structured jobs for CRM questions."""
-    planner = Planner(OpenRouterClient(api_key=None))
-    plan: ResearchPlan = await planner.plan(
-        question="Compare major competitors in the Indian CRM market",
-        research_run_id="run-test-12345",
-    )
+    with patch("app.integrations.openrouter.get_settings") as mock_cfg:
+        mock_cfg.return_value.openrouter_api_key = ""
+        mock_cfg.return_value.gemini_api_key = ""
+        planner = Planner(OpenRouterClient(api_key="", gemini_api_key=""))
+        plan: ResearchPlan = await planner.plan(
+            question="Compare major competitors in the Indian CRM market",
+            research_run_id="run-test-12345",
+        )
 
     assert isinstance(plan, ResearchPlan)
     assert plan.question == "Compare major competitors in the Indian CRM market"

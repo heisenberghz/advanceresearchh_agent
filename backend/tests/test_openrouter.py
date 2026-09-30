@@ -17,12 +17,15 @@ class SampleOutput(BaseModel):
 @pytest.mark.anyio
 async def test_unconfigured_openrouter_raises_error():
     """Verify that calling OpenRouter without an API key raises a clear OpenRouterError."""
-    client = OpenRouterClient(api_key=None)
-    assert not client.is_configured
+    with patch("app.integrations.openrouter.get_settings") as mock_settings:
+        mock_settings.return_value.openrouter_api_key = ""
+        mock_settings.return_value.gemini_api_key = ""
+        client = OpenRouterClient(api_key="", gemini_api_key="")
+        assert not client.is_configured
 
-    with pytest.raises(OpenRouterError) as exc_info:
-        await client.chat(messages=[{"role": "user", "content": "Hello"}])
-    assert "OPENROUTER_API_KEY is not configured" in str(exc_info.value)
+        with pytest.raises(OpenRouterError) as exc_info:
+            await client.chat(messages=[{"role": "user", "content": "Hello"}])
+        assert "OPENROUTER_API_KEY is not configured" in str(exc_info.value)
 
 
 @pytest.mark.anyio

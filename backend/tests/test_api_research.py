@@ -28,7 +28,10 @@ from app.models.source import Evidence, Source
 @pytest.fixture
 def repo():
     """Get the singleton repository instance and clean state for tests."""
+    from app.db.client import DatabaseClient
     r = get_repository()
+    old_db = r.db
+    r.db = DatabaseClient(None)
     r._memory_runs.clear()
     r._memory_jobs.clear()
     r._memory_facts.clear()
@@ -37,7 +40,8 @@ def repo():
     r._memory_gaps.clear()
     r._memory_reports.clear()
     r._memory_states.clear()
-    return r
+    yield r
+    r.db = old_db
 
 
 @pytest.fixture
@@ -280,7 +284,7 @@ def test_export_markdown_report(client, repo):
     assert res.status_code == 200
     assert "text/markdown" in res.headers["content-type"]
     assert "attachment" in res.headers["content-disposition"]
-    assert f"research_report_{run_id}.md" in res.headers["content-disposition"]
+    assert f"research-report-{run_id}.md" in res.headers["content-disposition"]
     assert "# Export Test Report" in res.text
 
 
@@ -318,7 +322,7 @@ def test_start_research_sync_e2e(client, repo):
             )
         ]
 
-    with patch("app.integrations.tavily.TavilyClient.search", side_effect=mock_search):
+    with patch("app.integrations.tavily.TavilyClient.search_to_sources", side_effect=mock_search):
         res = client.post(
             "/research?sync=true",
             json={"question": "What is the pricing model of Zoho?"},
@@ -342,4 +346,20 @@ def test_start_research_sync_e2e(client, repo):
         report_data = res_report.json()
         assert "markdown_content" in report_data
         assert report_data["research_run_id"] == run_id
+
+        # Check export markdown endpoint (Task 33)
+        res_export_md = client.get(f"/research/{run_id}/export/markdown")
+        assert res_export_md.status_code == 200
+        assert "text/markdown" in res_export_md.headers["content-type"]
+        assert "attachment" in res_export_md.headers["content-disposition"]
+        assert f"research-report-{run_id}.md" in res_export_md.headers["content-disposition"]
+        assert "Executive Summary" in res_export_md.text
+
+        # Check export PDF endpoint (Task 34)
+        res_export_pdf = client.get(f"/research/{run_id}/export/pdf")
+        assert res_export_pdf.status_code == 200
+        assert res_export_pdf.headers["content-type"] == "application/pdf"
+        assert "attachment" in res_export_pdf.headers["content-disposition"]
+        assert f"research-report-{run_id}.pdf" in res_export_pdf.headers["content-disposition"]
+        assert res_export_pdf.content.startswith(b"%PDF")
 
