@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, patch
 import pytest
 
+from app.integrations.openrouter import OpenRouterClient
 from app.integrations.tavily import TavilyClient
 from app.models.enums import JobStatus
 from app.models.fact import Fact
@@ -39,10 +40,14 @@ async def test_end_to_end_research_pipeline():
             )
         ]
 
+    from app.workflow.cache import get_research_cache
+    get_research_cache().clear()
+
     with patch.object(mock_tavily, "search_to_sources", side_effect=mock_search):
-        researcher = Researcher(tavily_client=mock_tavily)
+        mock_llm = OpenRouterClient(api_key="")
+        researcher = Researcher(tavily_client=mock_tavily, openrouter_client=mock_llm)
         parallel_researcher = ParallelResearcher(researcher=researcher, max_concurrency=4)
-        planner = Planner()
+        planner = Planner(openrouter_client=mock_llm)
 
         final_state: ResearchState = await run_research_pipeline(
             question=question,

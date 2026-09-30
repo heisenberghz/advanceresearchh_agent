@@ -116,15 +116,17 @@ def reduce_sources(
             if up.evidence and not curr.evidence:
                 curr.evidence = up.evidence
         elif up.url in source_map_by_url:
-            # Duplicate URL cited under a different temporary ID: merge snippets
+            # Duplicate URL cited under a different temporary ID: merge snippets and preserve metadata
             curr = source_map_by_url[up.url]
+            if up.title and not curr.title:
+                curr.title = up.title
             if up.evidence and curr.evidence and up.evidence not in curr.evidence:
                 curr.evidence = f"{curr.evidence}\n---\n{up.evidence}"
         else:
             source_map_by_id[up.id] = up
             source_map_by_url[up.url] = up
 
-    return list(source_map_by_id.values())
+    return list(source_map_by_url.values())
 
 
 def reduce_verification_results(

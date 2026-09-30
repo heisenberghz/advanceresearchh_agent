@@ -195,6 +195,36 @@ class Planner:
                 )
             )
 
+        # If no explicit jobs were provided by LLM, generate complete symmetric coverage
+        # for all (entity, dimension) pairs so research is thoroughly balanced.
+        if not jobs and raw.entities and raw.comparison_dimensions and len(raw.entities) >= 2:
+            existing_pairs = {
+                ((j.entity or "").strip().lower(), (j.attribute or "").strip().lower())
+                for j in jobs
+            }
+            for ent in raw.entities:
+                e_clean = (ent or "").strip()
+                if not e_clean:
+                    continue
+                for dim in raw.comparison_dimensions:
+                    d_clean = (dim or "").strip()
+                    if not d_clean:
+                        continue
+                    if (e_clean.lower(), d_clean.lower()) not in existing_pairs:
+                        job_id = f"job-{research_run_id[:8]}-{len(jobs) + 1:02d}"
+                        jobs.append(
+                            ResearchJob(
+                                id=job_id,
+                                research_run_id=research_run_id,
+                                description=f"Investigate {e_clean} {d_clean} specifications, official documentation, and disclosures",
+                                entity=e_clean,
+                                attribute=d_clean,
+                                status=JobStatus.PENDING,
+                                attempts=0,
+                            )
+                        )
+                        existing_pairs.add((e_clean.lower(), d_clean.lower()))
+
         # Guard: ensure at least one general job exists if none provided
         if not jobs:
             jobs.append(

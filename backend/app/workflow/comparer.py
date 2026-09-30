@@ -87,19 +87,37 @@ class Comparer:
                 canonical_metrics.append(m_clean)
                 metric_name_map[m_clean.lower()] = m_clean
 
-        # Discover metrics from jobs
+        # Discover metrics from jobs (canonical planned dimensions)
         for j in jobs:
             attr = (j.attribute or "").strip()
             if attr and attr.lower() not in metric_name_map:
                 canonical_metrics.append(attr)
                 metric_name_map[attr.lower()] = attr
 
-        # Discover metrics from facts
+        # Discover metrics from facts only if they are genuinely distinct and not already covered
+        def _is_covered_by_canonical(candidate: str) -> bool:
+            c_low = candidate.lower().strip()
+            for existing in canonical_metrics:
+                e_low = existing.lower().strip()
+                if c_low == e_low or c_low in e_low or e_low in c_low:
+                    return True
+                # Check thematic keyword overlap
+                privacy_set = {"privacy", "security", "encryption", "telemetry", "storage", "connectivity", "transit"}
+                pricing_set = {"pricing", "price", "tier", "tiers", "cost", "plans", "fee", "fees", "billing"}
+                speed_set = {"speed", "performance", "latency", "sync", "startup", "limits"}
+                c_words = set(c_low.replace("/", " ").replace("-", " ").replace("&", " ").split())
+                e_words = set(e_low.replace("/", " ").replace("-", " ").replace("&", " ").split())
+                for cluster in [privacy_set, pricing_set, speed_set]:
+                    if (c_words & cluster) and (e_words & cluster):
+                        return True
+            return False
+
         for f in facts:
             attr = (f.attribute or "").strip()
             if attr and attr.lower() not in metric_name_map:
-                canonical_metrics.append(attr)
-                metric_name_map[attr.lower()] = attr
+                if not _is_covered_by_canonical(attr):
+                    canonical_metrics.append(attr)
+                    metric_name_map[attr.lower()] = attr
 
         # Fallback if no metrics found
         if not canonical_metrics:
@@ -131,23 +149,37 @@ class Comparer:
             if e_key and m_key:
                 conflicts_by_pair[(e_key, m_key)] = c
 
-        # 4. Construct Matrix Cells
+        # 4. Construct Matrix Cells with Multi-Fact Synthesis
         cells: List[ComparisonCell] = []
+
+        def _is_semantic_attribute_match(m1: str, m2: str) -> bool:
+            w1 = m1.lower().strip()
+            w2 = m2.lower().strip()
+            if w1 == w2 or w1 in w2 or w2 in w1:
+                return True
+            privacy_set = {"privacy", "security", "encryption", "telemetry", "storage", "connectivity", "transit"}
+            pricing_set = {"pricing", "price", "tier", "tiers", "cost", "plans", "fee", "fees", "billing"}
+            speed_set = {"speed", "performance", "latency", "sync", "startup", "limits"}
+            set1 = set(w1.replace("/", " ").replace("-", " ").replace("&", " ").split())
+            set2 = set(w2.replace("/", " ").replace("-", " ").replace("&", " ").split())
+            for cluster in [privacy_set, pricing_set, speed_set]:
+                if (set1 & cluster) and (set2 & cluster):
+                    return True
+            return False
 
         for entity in canonical_entities:
             e_low = entity.lower()
             for metric in canonical_metrics:
                 m_low = metric.lower()
-                pair_facts = facts_by_pair.get((e_low, m_low), [])
+                pair_facts = list(facts_by_pair.get((e_low, m_low), []))
 
-                # Resilient fallback matching (e.g. "pricing" in "pricing tiers", "jira" in "jira software")
-                if not pair_facts:
-                    for (f_e_low, f_m_low), f_list in facts_by_pair.items():
-                        e_matches = (f_e_low == e_low) or (f_e_low in e_low) or (e_low in f_e_low)
-                        m_matches = (f_m_low == m_low) or (f_m_low in m_low) or (m_low in f_m_low)
-                        if e_matches and m_matches:
-                            pair_facts = f_list
-                            break
+                # Semantic and fuzzy attribute matching across facts for this entity
+                for (f_e_low, f_m_low), f_list in facts_by_pair.items():
+                    e_matches = (f_e_low == e_low) or (f_e_low in e_low) or (e_low in f_e_low)
+                    if e_matches and _is_semantic_attribute_match(f_m_low, m_low):
+                        for candidate_f in f_list:
+                            if candidate_f not in pair_facts:
+                                pair_facts.append(candidate_f)
 
                 if pair_facts:
                     # Select the best fact based on verification quality: GREEN > YELLOW > RED
@@ -160,6 +192,21 @@ class Comparer:
 
                     sorted_facts = sorted(pair_facts, key=fact_sort_key, reverse=True)
                     best_fact = sorted_facts[0]
+
+                    # Synthesize multi-fact values cleanly from the highest verification tier
+                    top_tier = sorted_facts[0].trust_tag
+                    tier_facts = [f for f in sorted_facts if f.trust_tag == top_tier]
+
+                    unique_values: List[str] = []
+                    seen_val_lower = set()
+                    for f in tier_facts:
+                        val_str = f.value.strip()
+                        if val_str and val_str.lower() not in seen_val_lower:
+                            seen_val_lower.add(val_str.lower())
+                            unique_values.append(val_str)
+
+                    # Join up to 3 distinct evidence findings with semicolons
+                    synthesized_value = "; ".join(unique_values[:3]) if unique_values else best_fact.value
 
                     # Check if there is an associated conflict
                     conflict_note: Optional[str] = None
@@ -178,7 +225,7 @@ class Comparer:
                         ComparisonCell(
                             entity=entity,
                             metric=metric,
-                            value=best_fact.value,
+                            value=synthesized_value,
                             trust_tag=best_fact.trust_tag,
                             fact_id=best_fact.id,
                             source_ids=all_source_ids,

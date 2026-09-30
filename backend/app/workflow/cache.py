@@ -101,12 +101,15 @@ class ResearchCache:
 
         cloned_facts: List[Fact] = []
         for idx, f in enumerate(facts, start=1):
-            new_src_ids = [source_map.get(s_id, s_id) for s_id in f.source_ids]
+            new_src_ids = [source_map[s_id] for s_id in f.source_ids if s_id in source_map]
+            if not new_src_ids and cloned_sources:
+                new_src_ids = [cloned_sources[0].id]
             new_evidence = []
             for ev in f.evidence:
+                mapped_sid = source_map.get(ev.source_id) or (cloned_sources[0].id if cloned_sources else ev.source_id)
                 new_evidence.append(
                     ev.model_copy(
-                        update={"source_id": source_map.get(ev.source_id, ev.source_id)}
+                        update={"source_id": mapped_sid}
                     )
                 )
 

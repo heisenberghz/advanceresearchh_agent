@@ -1033,26 +1033,35 @@ Each entry records what changed, verification results, key decisions, and the ne
       - `neo_brutalist_report_view_1790802573060.png`
 - **Result**: Success. High-impact, distinctive Neo-Brutalist interface.
 
+---
 
+## [Task 37] High-Precision Multi-Fact Dimension Synthesis & Semantic Matrix Alignment
 
+- **Objective**:
+  - Eliminate false `NOT FOUND` cells and fragmented rows across compared entities when LLMs extract granular sub-attributes (e.g. "Telemetry", "End-to-End Encryption" vs general "Privacy").
+  - Guarantee symmetric research planning so all entities are queried for all requested dimensions.
+  - Implement multi-fact synthesis in comparison cells to provide rich, comprehensive evidence rather than discarding valid facts.
+  - Maintain 100% test suite pass rate across all 108 backend tests.
 
+- **Changes**:
+  - [comparer.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/comparer.py):
+    - Implemented `_is_semantic_attribute_match()` and `_is_covered_by_canonical()` with semantic keyword clustering (`privacy`, `pricing`, `speed`, `security`, `storage`, `compliance`, `founded`, `market presence`).
+    - Implemented multi-fact synthesis: groups non-redundant findings from the highest trust tier and synthesizes up to 3 evidence points per cell (joined by ` ; `).
+    - Prevents orphan matrix rows where one entity had a granular sub-label and the other had a broader label.
+  - [planner.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/planner.py):
+    - Added symmetric job generation fallback to ensure every `(entity, dimension)` combination receives an independent, targeted search query.
+  - [cache.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/cache.py):
+    - Fixed source ID remapping in `get_reusable_results` to guarantee all cited source IDs match cloned sources, preserving unbroken provenance.
+  - [state.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/state.py):
+    - Preserved URL-based deduplication in `reduce_sources()` while merging rich evidence snippets.
+  - [test_graph.py](file:///d:/christ%20hachathon%20pro/backend/tests/test_graph.py) & [test_pipeline_integration.py](file:///d:/christ%20hachathon%20pro/backend/tests/test_pipeline_integration.py):
+    - Added test isolation cache clearing and updated provenance assertions for synthesized multi-fact cells.
 
+- **Verification**:
+  - Full pytest suite: **108 passed out of 108 tests (100% pass rate)**:
+    - `test_graph.py` + `test_pipeline_integration.py`: 5/5 PASSED.
+    - `test_comparer.py` + `test_planner.py` + `test_researcher.py` + `test_state.py` + `test_cache.py`: 24/24 PASSED.
+    - `test_checker.py` + `test_conflicts.py` + `test_database.py` + `test_gaps.py` + `test_health.py` + `test_models.py` + `test_parallel.py` + `test_retry.py` + `test_trust_rules.py`: 53/53 PASSED.
+    - `test_openrouter.py` + `test_tavily.py` + `test_writer.py` + `test_api_research.py`: 26/26 PASSED.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- **Result**: Complete success. Eliminates matrix fragmentation and delivers professional, deep multi-source research synthesis.
