@@ -165,6 +165,39 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 7: Tavily Integration (web search client, snippet and metadata normalization, retrieval timestamps).
 
+---
+
+## 2026-09-30 17:39 IST — Task 7: Tavily Search Integration
+
+- **Task**: TASK 7 — Tavily Integration (Phase 3: External Integrations)
+- **What was implemented**:
+  - Built async Tavily search client in `backend/app/integrations/tavily.py` using `httpx.AsyncClient`.
+  - Implemented normalized data model `TavilySearchResult` capturing title, raw URL, snippet content, domain (extracted via `urlparse`), relevance score, and publication date.
+  - Implemented `search_to_sources()` method mapping search results directly into domain `Source` models with generated unique IDs (`src-...`), research run linkage, and UTC retrieval timestamps.
+  - Implemented configurable search limits derived from `MAX_SEARCHES_PER_JOB` and query sanitization.
+  - Implemented resilient timeout and HTTP status error handling wrapped in `TavilyError` with zero API key exposure.
+  - Updated `backend/app/integrations/__init__.py` to export Tavily client symbols.
+  - Created automated test suite in `backend/tests/test_tavily.py`.
+- **Files created/modified**:
+  - Created: `backend/app/integrations/tavily.py`
+  - Created: `backend/tests/test_tavily.py`
+  - Modified: `backend/app/integrations/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 24/24 unit tests passed in 4.46s across the test suite.
+  - Verified unconfigured error handling when `TAVILY_API_KEY` is absent.
+  - Verified rejection of empty or whitespace queries.
+  - Verified result normalization and domain extraction.
+  - Verified conversion from Tavily search items directly into `Source` models with full provenance.
+  - Verified HTTP error (401/429) and timeout wrapping into `TavilyError`.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Built directly using async HTTP client to ensure non-blocking concurrent research in LangGraph and seamless mocking during tests.
+  - Preserved verbatim snippet content as `evidence` and recorded retrieval timestamps for provenance auditability.
+- **What should be done next**:
+  - Phase 4: Task 8 (Planner — converting user business questions into structured research jobs).
+
+
 
 
 
