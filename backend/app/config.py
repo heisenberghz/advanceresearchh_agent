@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     # External API Keys (kept strictly server-side)
     openrouter_api_key: Optional[str] = Field(default=None, alias="OPENROUTER_API_KEY")
+    gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
     tavily_api_key: Optional[str] = Field(default=None, alias="TAVILY_API_KEY")
 
     # Supabase PostgreSQL Configuration

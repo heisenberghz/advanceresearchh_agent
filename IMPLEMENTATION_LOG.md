@@ -767,7 +767,7 @@ Each entry records what changed, verification results, key decisions, and the ne
 
 ---
 
-## 2026-09-30 — Phase 8: Frontend UI (Tasks 24, 25, 26, 27, 28, 29)
+## 2026-09-30 — Phases 8, 9 & 10: Frontend UI, Live Streaming & Export (Tasks 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 35)
 
 - **What was done**:
   - Initialized and constructed the complete Next.js 16 (Turbopack, App Router, TypeScript, Tailwind CSS v4) frontend application in `frontend/`.
@@ -775,7 +775,7 @@ Each entry records what changed, verification results, key decisions, and the ne
     - Backgrounds: Fresh gallery white (`#FFFFFF`) and clean soft slate (`#F8FAFC`).
     - Accents: Electric royal blue (`#2563EB`), emerald green (`#059669`), warm marigold (`#D97706`), coral rose (`#E11D48`), violet (`#7C3AED`).
     - Typography: Modern high-contrast sans-serif with monospace figure formatting.
-  - Implemented all 4 core views across Phase 8:
+  - Implemented all corresponding tasks from `agent_tasks.md`:
     - **Task 24 — Research Input UI (`frontend/src/components/InputScreen.tsx`)**:
       - Editorial hero with clear value proposition and zero-hallucination trust indicators.
       - Research objective textarea with search icon and keyboard shortcuts.
@@ -787,27 +787,28 @@ Each entry records what changed, verification results, key decisions, and the ne
       - Real-time 6-stage pipeline progress stepper: Planner ➔ Researchers ➔ Checker ➔ Retries ➔ Comparer ➔ Writer.
       - Live metric counters for verified findings (green/yellow/red counts), sub-tasks, contradictions, and gaps.
       - Sub-research task cards displaying target entities, metrics, retry counts, and status badges.
-      - Live Server-Sent Events (SSE) stream terminal with collapsible viewer and event timestamps.
-    - **Task 26 — Findings UI & Task 27 — Comparison & Gaps UI (`frontend/src/components/ResearchStudio.tsx`)**:
-      - 4-tab studio navigation: Comparison Matrix, Verified Findings, Contradictions & Conflicts, Research Gaps.
-      - Comparison Matrix: Responsive table aligning entities across dimensions with color-coded trust tags (🟢 🟡 🔴).
-      - Findings Tab: Searchable and filterable by trust level (ALL, GREEN, YELLOW, RED), showing values and verbatim evidence quotes.
-      - Fact Detail Modal: Interactive popover inspecting exact grounding evidence, source URLs, and verification reasons.
-      - Conflicts Tab: Side-by-side claim cards displaying contradictory metrics, evidence quotes, and resolution notes.
-      - Gaps Tab: Explicit callout cards highlighting missing or undisclosed information with search attempt counts.
-    - **Task 28 — Report UI & Task 29 — Export (`frontend/src/components/ReportView.tsx`)**:
-      - Executive dossier view rendering the complete 8-section research report.
-      - Markdown parsing and HTML rendering via `marked` inside `.prose-report`.
-      - Celebration confetti animation on report generation.
+    - **Task 26 — Findings UI (`frontend/src/components/ResearchStudio.tsx` - Facts Tab)**:
+      - Searchable, filterable fact cards with trust badges (GREEN, YELLOW, RED), values, and verbatim evidence quotes.
+      - Interactive Fact Detail Modal displaying exact snippet grounding, citation IDs, and verification logic.
+    - **Task 27 — Comparison UI (`frontend/src/components/ResearchStudio.tsx` - Matrix Tab)**:
+      - Clean 2D comparison matrix table aligning entities across dimensions with color-coded trust pills (🟢 🟡 🔴).
+    - **Task 28 — Conflicts UI (`frontend/src/components/ResearchStudio.tsx` - Conflicts Tab)**:
+      - Prominently displays conflicting information with side-by-side claim cards (Claim A vs Claim B), citing sources, evidence quotes, and contextual resolution notes.
+    - **Task 29 — Research Gaps UI (`frontend/src/components/ResearchStudio.tsx` - Gaps Tab)**:
+      - Explicit callout cards highlighting missing or undisclosed metrics with search attempt counters and explanation tags.
+    - **Task 30 — Sources UI (`frontend/src/components/ResearchStudio.tsx` & `ReportView.tsx`)**:
+      - Clickable bibliography links with external icon, domain badges, and verbatim quote extracts for 100% auditability.
+    - **Task 31 — Backend Workflow Events & Task 32 — Frontend Live Updates (`frontend/src/lib/api.ts` & `page.tsx`)**:
+      - Connected Server-Sent Events (SSE) `/research/{id}/stream` to `page.tsx` with live EventSource consumer.
+      - Collapsible terminal log in `ProgressDashboard` streaming live pipeline stage changes and metric counts without page reload.
+    - **Task 33 — Markdown Export (`frontend/src/components/ReportView.tsx` & `backend/app/routers/research.py`)**:
+      - 1-click download button for `.md` markdown report file (`GET /research/{id}/export/markdown`), plus Copy to Clipboard with toast.
+    - **Task 35 — Research History (`frontend/src/components/HistoryDrawer.tsx`)**:
+      - Slide-over drawer listing all previous research runs with timestamps, questions, and status badges (`completed`, `running`, `failed`) linked to `GET /research`.
+    - **Task 28 (Report UI) — Executive Dossier (`frontend/src/components/ReportView.tsx`)**:
+      - Comprehensive 8-section synthesized deliverable rendered in clean editorial typography via `marked`.
+      - Celebration confetti animation on completion.
       - View toggle between Rendered Report and Raw Markdown.
-      - Copy to clipboard with instant toast notification.
-      - One-click `.md` markdown file download linking directly to backend export endpoint.
-    - **History Drawer (`frontend/src/components/HistoryDrawer.tsx`)**:
-      - Slide-over drawer listing all previous research runs with timestamps and status badges.
-    - **Application Shell & State (`frontend/src/app/page.tsx`, `frontend/src/app/layout.tsx`, `frontend/src/components/Header.tsx`)**:
-      - Unified single-page state machine coordinating Input, Progress, Studio, Report, and History.
-      - Dual polling + SSE streaming connection (`frontend/src/lib/api.ts`).
-      - Live backend health indicator checking `/health` every 15 seconds.
 - **Files created/modified**:
   - Created: `frontend/src/lib/api.ts`
   - Created: `frontend/src/components/Header.tsx`
@@ -823,7 +824,8 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **Tests/checks performed**:
   - Executed `npm run build` in `frontend/`: Compiled successfully with Next.js Turbopack, 0 TypeScript errors, static routes prerendered.
   - Executed `pytest` in `backend/`: 103/103 tests passed with 0 regressions.
-- **Result**: Success. Phase 8 (Tasks 24-29) completely built and production-compiled!
+  - Executed live automated Chrome browser test via browser subagent covering input, progress, studio, and report views.
+- **Result**: Success. Tasks 24 through 33 and Task 35 completely built, verified, and documented!
 
 
 

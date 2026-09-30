@@ -20,11 +20,12 @@ class OpenRouterError(Exception):
 
 
 class OpenRouterClient:
-    """Client for executing LLM requests through OpenRouter gateway."""
+    """Client for executing LLM requests through OpenRouter gateway with optional Gemini fallback."""
 
     def __init__(
         self,
         api_key: Optional[str] = None,
+        gemini_api_key: Optional[str] = None,
         research_model: Optional[str] = None,
         writer_model: Optional[str] = None,
         timeout_seconds: float = 60.0,
@@ -32,18 +33,19 @@ class OpenRouterClient:
     ):
         cfg = settings or get_settings()
         self.api_key = api_key or cfg.openrouter_api_key
+        self.gemini_api_key = gemini_api_key or cfg.gemini_api_key
         self.research_model = research_model or cfg.research_model
         self.writer_model = writer_model or cfg.writer_model
         self.timeout = httpx.Timeout(timeout_seconds, connect=10.0)
 
     @property
     def is_configured(self) -> bool:
-        """Check if OpenRouter API key is available."""
-        return bool(self.api_key and self.api_key.strip())
+        """Check if OpenRouter or Gemini fallback API key is available."""
+        return bool((self.api_key and self.api_key.strip()) or (self.gemini_api_key and self.gemini_api_key.strip()))
 
     def _get_headers(self) -> Dict[str, str]:
         """Build request headers with secure authentication."""
-        if not self.is_configured:
+        if not (self.api_key and self.api_key.strip()):
             raise OpenRouterError(
                 "OPENROUTER_API_KEY is not configured. "
                 "Please configure it in backend/.env before calling the LLM."
@@ -55,6 +57,47 @@ class OpenRouterClient:
             "Content-Type": "application/json",
         }
 
+    async def _call_gemini_fallback(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.2,
+        max_tokens: Optional[int] = None,
+        json_mode: bool = False,
+    ) -> str:
+        """Fallback to Google Gemini API (Plan B) if configured."""
+        if not self.gemini_api_key or not self.gemini_api_key.strip():
+            raise OpenRouterError("Gemini fallback key is not configured.")
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}"
+        contents = []
+        for m in messages:
+            role = "user" if m.get("role") in ("user", "system") else "model"
+            contents.append({"role": role, "parts": [{"text": m.get("content", "")}]})
+
+        payload: Dict[str, Any] = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": temperature,
+            },
+        }
+        if json_mode:
+            payload["generationConfig"]["responseMimeType"] = "application/json"
+        if max_tokens:
+            payload["generationConfig"]["maxOutputTokens"] = max_tokens
+
+        logger.info("[LLM Fallback] Routing request to Google Gemini 1.5 Flash")
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+            res_json = resp.json()
+            candidates = res_json.get("candidates", [])
+            if not candidates:
+                raise OpenRouterError("Gemini fallback returned no candidates.")
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if not parts:
+                raise OpenRouterError("Gemini fallback returned empty content parts.")
+            return parts[0].get("text", "")
+
     async def chat(
         self,
         messages: List[Dict[str, str]],
@@ -63,18 +106,15 @@ class OpenRouterClient:
         max_tokens: Optional[int] = None,
         json_mode: bool = False,
     ) -> str:
-        """Execute a chat completion request through OpenRouter.
+        """Execute a chat completion request through OpenRouter, falling back to Gemini if configured."""
+        if not (self.api_key and self.api_key.strip()):
+            if self.gemini_api_key and self.gemini_api_key.strip():
+                return await self._call_gemini_fallback(messages, temperature, max_tokens, json_mode)
+            raise OpenRouterError(
+                "OPENROUTER_API_KEY is not configured. "
+                "Please configure it in backend/.env before calling the LLM."
+            )
 
-        Args:
-            messages: List of message objects with 'role' and 'content'.
-            model: Model name. Defaults to self.research_model if not specified.
-            temperature: Sampling temperature (lower = more deterministic).
-            max_tokens: Maximum token limit for output.
-            json_mode: If True, requests JSON response formatting.
-
-        Returns:
-            The string content returned by the assistant.
-        """
         chosen_model = model or self.research_model
         headers = self._get_headers()
 
@@ -103,18 +143,18 @@ class OpenRouterClient:
                 message_content = choices[0].get("message", {}).get("content", "")
                 return message_content
 
-        except httpx.TimeoutException as exc:
-            logger.error("OpenRouter request timed out for model %s: %s", chosen_model, str(exc))
-            raise OpenRouterError(f"OpenRouter request timed out after {self.timeout.read}s") from exc
-
-        except httpx.HTTPStatusError as exc:
-            status_code = exc.response.status_code
-            error_detail = exc.response.text
-            logger.error("OpenRouter returned HTTP %d: %s", status_code, error_detail)
-            raise OpenRouterError(f"OpenRouter HTTP error {status_code}: {error_detail}") from exc
-
         except Exception as exc:
-            logger.error("Unexpected error during OpenRouter call: %s", str(exc))
+            if self.gemini_api_key and self.gemini_api_key.strip():
+                logger.warning("Primary LLM call failed (%s). Triggering Gemini Plan B fallback...", str(exc))
+                try:
+                    return await self._call_gemini_fallback(messages, temperature, max_tokens, json_mode)
+                except Exception as fb_exc:
+                    logger.error("Gemini fallback also failed: %s", str(fb_exc))
+
+            if isinstance(exc, httpx.TimeoutException):
+                raise OpenRouterError(f"OpenRouter request timed out after {self.timeout.read}s") from exc
+            if isinstance(exc, httpx.HTTPStatusError):
+                raise OpenRouterError(f"OpenRouter HTTP error {exc.response.status_code}: {exc.response.text}") from exc
             raise OpenRouterError(f"Failed to communicate with OpenRouter: {exc}") from exc
 
     async def chat_for_research(
