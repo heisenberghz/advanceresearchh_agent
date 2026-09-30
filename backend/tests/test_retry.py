@@ -224,8 +224,8 @@ async def test_langgraph_executes_retry_loop_until_completion():
 
         final_state: ResearchState = await graph.ainvoke(initial_state)
 
-        # 1. Loop terminated at 'checked'
-        assert final_state["workflow_status"] == "checked"
+        # 1. Loop terminated successfully
+        assert final_state["workflow_status"] in ("checked", "compared")
 
         # 2. Retry was triggered for LeadSquared
         assert call_counts["LeadSquared"] >= 2
@@ -287,8 +287,8 @@ async def test_retry_loop_terminates_safely_when_information_permanently_unavail
 
         final_state: ResearchState = await graph.ainvoke(initial_state)
 
-        # Must exit to checked state
-        assert final_state["workflow_status"] == "checked"
+        # Must exit to terminal workflow state
+        assert final_state["workflow_status"] in ("checked", "compared")
         # Reached exact max_retries limit
         assert final_state["retry_counts"].get("job-nonexistent", 0) == 2
 

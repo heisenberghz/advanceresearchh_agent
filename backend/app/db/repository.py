@@ -181,6 +181,26 @@ class ResearchRepository:
         self._memory_conflicts[conflict_data["id"]] = conflict_data
         return conflict_data
 
+    def get_conflicts(self, research_run_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all conflicts for a research run."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("conflicts")
+                    .select("*")
+                    .eq("research_run_id", research_run_id)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to retrieve conflicts for %s: %s", research_run_id, str(exc))
+                raise RuntimeError(f"Database error reading conflicts: {exc}") from exc
+
+        return [
+            c for c in self._memory_conflicts.values()
+            if c.get("research_run_id") == research_run_id
+        ]
+
     def save_research_gap(self, gap_data: Dict[str, Any]) -> Dict[str, Any]:
         """Insert a research gap record."""
         gap_data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
@@ -194,6 +214,26 @@ class ResearchRepository:
 
         self._memory_gaps[gap_data["id"]] = gap_data
         return gap_data
+
+    def get_research_gaps(self, research_run_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all research gaps for a research run."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("research_gaps")
+                    .select("*")
+                    .eq("research_run_id", research_run_id)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to retrieve research gaps for %s: %s", research_run_id, str(exc))
+                raise RuntimeError(f"Database error reading research gaps: {exc}") from exc
+
+        return [
+            gap for gap in self._memory_gaps.values()
+            if gap.get("research_run_id") == research_run_id
+        ]
 
     # -------------------------------------------------------------------------
     # Reports
@@ -235,3 +275,14 @@ class ResearchRepository:
             if report.get("research_run_id") == research_run_id:
                 return report
         return None
+
+
+_REPOSITORY_INSTANCE: Optional[ResearchRepository] = None
+
+
+def get_repository() -> ResearchRepository:
+    """Retrieve or initialize the ResearchRepository singleton instance."""
+    global _REPOSITORY_INSTANCE
+    if _REPOSITORY_INSTANCE is None:
+        _REPOSITORY_INSTANCE = ResearchRepository()
+    return _REPOSITORY_INSTANCE

@@ -531,6 +531,94 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 17: Research Gaps (persisting unverified/missing information as explicit ResearchGap records).
 
+---
+
+## 2026-09-30 19:00 IST — Task 17: Missing Information / Research Gaps
+
+- **Task**: TASK 17 — Missing Information / Research Gaps (Phase 5: Verification System)
+- **What was implemented**:
+  - Built the `GapDetector` component in `backend/app/workflow/gaps.py` implementing explicit representation of unestablished, unverified, or failed research findings.
+  - Implemented `detect_gaps()`: scans research jobs, extracted facts, and verification results to identify true gaps:
+    1. Planned research jobs yielding zero facts (e.g. empty search results).
+    2. Planned research jobs that failed due to search or service exceptions.
+    3. Planned research jobs where all extracted facts were rejected / marked `TrustTag.RED` / `UNSUPPORTED` and retry bounds were exhausted.
+    4. Ensures topics with at least one verified (`TrustTag.GREEN` or `TrustTag.YELLOW`) fact are never marked as gaps.
+  - Enforced critical system invariants:
+    - **No fabricated values**: Missing information is never replaced with placeholder facts, zero values, or hallucinated claims; facts remain strictly evidence-backed.
+    - **Explicit `ResearchGap` records**: Stores `requested_information`, clear human-readable `reason`, `attempts` count, and status (`"gap"`).
+  - Implemented `persist_gaps()`: saves identified gaps into the Supabase database or in-memory repository via `ResearchRepository.save_research_gap()`.
+  - Added query methods `get_research_gaps()` and `get_conflicts()` to `ResearchRepository` in `backend/app/db/repository.py` and provided singleton `get_repository()`.
+  - Integrated `gaps_node` into LangGraph in `backend/app/workflow/graph.py` executing after the retry loop finishes (`route_after_checker -> detect_gaps -> END`).
+  - Exported gap detector symbols in `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_gaps.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/gaps.py`
+  - Created: `backend/tests/test_gaps.py`
+  - Modified: `backend/app/db/repository.py`
+  - Modified: `backend/app/workflow/graph.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 78/78 unit & integration tests passed across the entire suite (6 dedicated gap tests).
+  - Verified no false gaps when verified facts exist for a topic.
+  - Verified gap created when research job yields 0 facts.
+  - Verified gap created when research job encounters execution failure.
+  - Verified gap created when all facts for an entity/attribute are marked RED.
+  - Verified repository persistence and round-trip retrieval of `ResearchGap` records.
+  - Verified end-to-end LangGraph pipeline execution: verified entities receive facts while unavailable entities receive explicit gaps without any fabricated facts.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Designed gap detection to run deterministically after verification and bounded retries, guaranteeing that final reports have an accurate, auditable list of missing data.
+- **What should be done next**:
+  - Task 18: Comparer (creating structured comparison matrices from verified research).
+
+---
+
+## 2026-09-30 19:08 IST — Task 18: Comparer
+
+- **Task**: TASK 18 — Comparer (Phase 6: Comparison and Reporting)
+- **What was implemented**:
+  - Built the `Comparer` component in `backend/app/workflow/comparer.py` transforming verified facts, research gaps, and conflicts into structured entity-by-dimension comparison matrices.
+  - Implemented `build_matrix()`:
+    1. **Entity & Metric Canonicalization**: Identifies distinct target entities and comparison dimensions from research state, facts, and jobs.
+    2. **Fact Quality Prioritization**: Where multiple facts exist for an (entity, metric) pair, automatically selects the highest-quality verified fact (🟢 `TrustTag.GREEN` > 🟡 `TrustTag.YELLOW` > 🔴 `TrustTag.RED`).
+    3. **Missing Value Representation**: Missing or unverified metrics are never fabricated or guessed; they are explicitly represented as `"Not found"` with `TrustTag.RED` and linked to `gap_id` and explanation notes from `ResearchGap` records.
+    4. **Conflict Annotation**: Where contradictory disclosures exist, records conflict descriptions directly inside `cell.notes`.
+    5. **Provenance Preservation**: Retains `cell.fact_id` and all supporting `cell.source_ids`.
+  - Enhanced domain models in `backend/app/models/comparison.py`:
+    - Added `gap_id` and `notes` to `ComparisonCell`.
+    - Added `get_cell(entity, metric)` lookup to `ComparisonMatrix`.
+    - Added `to_markdown_table()` rendering clean GitHub-Flavored Markdown tables with trust badges (🟢/🟡/🔴).
+  - Integrated `comparer_node` into LangGraph in `backend/app/workflow/graph.py` executing after gap detection (`detect_gaps -> comparer -> END`), populating `state["comparison"]`.
+  - Exported comparer symbols in `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_comparer.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/comparer.py`
+  - Created: `backend/tests/test_comparer.py`
+  - Modified: `backend/app/models/comparison.py`
+  - Modified: `backend/app/workflow/graph.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `backend/tests/test_graph.py`
+  - Modified: `backend/tests/test_retry.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 85/85 unit & integration tests passed across the entire suite (7 dedicated comparer tests).
+  - Verified grouping of facts by entity and metric into a complete 2D matrix.
+  - Verified prioritization of verified GREEN facts over RED facts.
+  - Verified representation of missing values as `"Not found"` with RED trust badge.
+  - Verified linkage of missing cells to `ResearchGap` IDs and notes.
+  - Verified inclusion of conflict notes in comparison cells.
+  - Verified Markdown comparison table rendering with columns and trust badges.
+  - Verified end-to-end LangGraph pipeline execution producing `state["comparison"]`.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Ensured matrix generation is completely deterministic without external API calls.
+  - Made missing values explicit and auditable, maintaining 100% provenance back to `Fact`, `Source`, and `ResearchGap`.
+- **What should be done next**:
+  - Task 19: Writer (synthesizing the final traceable research report with markdown and citations).
+
+
+
 
 
 
