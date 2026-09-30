@@ -33,6 +33,7 @@ from unittest.mock import patch
 import pytest
 
 from app.db.repository import ResearchRepository
+from app.integrations.openrouter import OpenRouterClient
 from app.integrations.tavily import TavilyClient
 from app.models.comparison import ComparisonMatrix
 from app.models.enums import TrustTag
@@ -92,10 +93,11 @@ async def test_full_research_pipeline_realistic_scenario():
 
         return []
 
+    mock_llm = OpenRouterClient(api_key=None, gemini_api_key=None)
     with patch.object(mock_tavily, "search_to_sources", side_effect=mock_tavily_search):
-        researcher = Researcher(tavily_client=mock_tavily)
+        researcher = Researcher(tavily_client=mock_tavily, openrouter_client=mock_llm)
         parallel_researcher = ParallelResearcher(researcher=researcher, max_concurrency=4)
-        planner = Planner()
+        planner = Planner(openrouter_client=mock_llm)
 
         final_state: ResearchState = await run_research_pipeline(
             question=question,
@@ -231,10 +233,11 @@ async def test_full_research_pipeline_offline_deterministic_execution():
             )
         ]
 
+    mock_llm = OpenRouterClient(api_key=None, gemini_api_key=None)
     with patch.object(mock_tavily, "search_to_sources", side_effect=mock_offline_search):
-        researcher = Researcher(tavily_client=mock_tavily)
+        researcher = Researcher(tavily_client=mock_tavily, openrouter_client=mock_llm)
         parallel_researcher = ParallelResearcher(researcher=researcher, max_concurrency=2)
-        planner = Planner()
+        planner = Planner(openrouter_client=mock_llm)
 
         final_state = await run_research_pipeline(
             question=question,

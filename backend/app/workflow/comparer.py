@@ -140,6 +140,15 @@ class Comparer:
                 m_low = metric.lower()
                 pair_facts = facts_by_pair.get((e_low, m_low), [])
 
+                # Resilient fallback matching (e.g. "pricing" in "pricing tiers", "jira" in "jira software")
+                if not pair_facts:
+                    for (f_e_low, f_m_low), f_list in facts_by_pair.items():
+                        e_matches = (f_e_low == e_low) or (f_e_low in e_low) or (e_low in f_e_low)
+                        m_matches = (f_m_low == m_low) or (f_m_low in m_low) or (m_low in f_m_low)
+                        if e_matches and m_matches:
+                            pair_facts = f_list
+                            break
+
                 if pair_facts:
                     # Select the best fact based on verification quality: GREEN > YELLOW > RED
                     def fact_sort_key(f: Fact) -> int:

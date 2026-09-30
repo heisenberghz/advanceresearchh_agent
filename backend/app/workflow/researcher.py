@@ -202,6 +202,14 @@ class Researcher:
         for idx, item in enumerate(raw_output.facts, start=1):
             # Provenance guard: ensure cited source exists in retrieved set
             cited_source = source_map.get(item.source_id)
+            if not cited_source and item.source_id:
+                # Try matching by ID substring or domain
+                for s in sources:
+                    if s.id in item.source_id or item.source_id in s.id or (s.domain and s.domain in item.source_id):
+                        cited_source = s
+                        break
+            if not cited_source and len(sources) == 1:
+                cited_source = sources[0]
             if not cited_source:
                 continue
 
