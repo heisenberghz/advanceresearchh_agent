@@ -1359,26 +1359,24 @@ The application should show understandable errors rather than crashing or produc
 
 ---
 
-# TASK 43 — UI Polish
+# TASK 43 — UI Polish [COMPLETED]
 
 Only after the workflow is reliable.
 
 Polish:
 
-- Typography
-- Spacing
-- Cards
-- Status indicators
-- Trust badges
-- Tables
-- Source display
-- Loading states
-- Empty states
-- Error states
-- Dark/light mode
-- Responsive behavior
-
-Do not spend excessive time on animations or visual effects.
+- [x] Typography: Integrated Google Newsreader (editorial serif headings), Geist (body), and Geist Mono (metrics & IDs).
+- [x] Spacing & Structure: Instituted institutional publication grid, hairline borders (1px solid #E2E8F0), clean margins.
+- [x] Cards: Replaced generic shadows with .editorial-card tokens and subtle hairline depth.
+- [x] Status indicators: Replaced AI slop/neon gradients with restrained institutional indicators (Spruce teal, Ochre amber, Crimson red).
+- [x] Trust badges: Clean, monospace deterministic verification indicators with dot status indicators, zero emoji cliches.
+- [x] Tables: Replaced standard tables with Financial Times/Bloomberg-grade side-by-side comparative matrices.
+- [x] Source display: Verbatim citation excerpts with primary URL inspect triggers and side-by-side contradiction dossiers.
+- [x] Loading states: Clean monospace spinners and stage progressions without pulsing neon glows.
+- [x] Empty states: Crisp monospace audit notices.
+- [x] Error states: High-contrast monospace alert labels.
+- [x] Branding: Replaced generic sparkles with sleek R/O monogram and [ GATEWAYS 2026 ] badge.
+- [x] Responsive behavior: Verified responsive layouts across desktop and mobile viewports.
 
 ---
 

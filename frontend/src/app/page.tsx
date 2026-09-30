@@ -195,7 +195,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 selection:bg-slate-900 selection:text-white">
       <Header
         onNewResearch={handleNewResearch}
         onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)}
