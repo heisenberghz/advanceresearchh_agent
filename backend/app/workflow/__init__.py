@@ -20,6 +20,7 @@ from app.workflow.state import (
     reduce_sources,
 )
 from app.workflow.checker import Checker, CheckerBatchResult, get_checker
+from app.workflow.conflicts import ConflictDetector, ConflictType, get_conflict_detector
 from app.workflow.trust import (
     TrustEvaluation,
     TrustRulesConfig,
@@ -42,6 +43,10 @@ __all__ = [
     "Checker",
     "CheckerBatchResult",
     "get_checker",
+    "ConflictDetector",
+    "ConflictType",
+    "get_conflict_detector",
+
     "TrustRulesConfig",
     "TrustScoreBreakdown",
     "TrustEvaluation",

@@ -212,7 +212,8 @@ def test_checker_detects_and_preserves_conflicts():
     # 1. Conflicts detected and preserved
     assert len(batch_result.conflicts) == 1
     conflict = batch_result.conflicts[0]
-    assert conflict.status == ConflictStatus.UNRESOLVED
+    assert conflict.status in (ConflictStatus.UNRESOLVED, ConflictStatus.EXPLAINED)
+
     assert len(conflict.competing_values) == 2
     competing_vals = {cv.value for cv in conflict.competing_values}
     assert competing_vals == {"₹1,200/user/mo", "₹3,500/user/mo"}

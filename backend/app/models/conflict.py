@@ -20,6 +20,8 @@ class Conflict(BaseModel):
 
     id: str = Field(description="Unique conflict identifier")
     research_run_id: str = Field(description="Associated research run ID")
+    entity: Optional[str] = Field(default=None, description="Target entity experiencing the conflict")
+    attribute: Optional[str] = Field(default=None, description="Specific dimension or metric in dispute")
     description: str = Field(description="Summary of the contradiction")
     status: ConflictStatus = Field(default=ConflictStatus.UNRESOLVED, description="Resolution status")
     competing_values: List[CompetingValue] = Field(
@@ -30,7 +32,12 @@ class Conflict(BaseModel):
         default_factory=list,
         description="IDs of all sources involved in the conflict",
     )
+    resolution_note: Optional[str] = Field(
+        default=None,
+        description="Contextual explanation or distinction between the competing values",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Conflict registration timestamp",
     )
+

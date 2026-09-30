@@ -451,6 +451,49 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 15: Conflict Detection & Resolution (enhancing structured conflict representation and handling).
 
+---
+
+## 2026-09-30 18:46 IST — Task 15: Conflict Detection & Resolution
+
+- **Task**: TASK 15 — Conflict Detection & Resolution (Phase 5: Verification System)
+- **What was implemented**:
+  - Built the dedicated `ConflictDetector` engine in `backend/app/workflow/conflicts.py` implementing comprehensive multi-modal contradiction detection and resolution analysis.
+  - Implemented 4 conflict classifications (`ConflictType`):
+    1. **Numeric Divergence**: Parses quantitative metrics (including Indian Cr/Lakh and international B/M multipliers) and flags discrepancies beyond a 2% tolerance.
+    2. **Textual / Categorical Discrepancy**: Detects qualitative disagreements, binary antonyms (e.g. *free tier* vs *paid only*, *publicly traded* vs *privately held*, *open-source* vs *proprietary*), and mutually exclusive entity attributes (such as divergent headquarters locations).
+    3. **Disclosure / Transparency Discrepancy**: Detects when one source asserts a concrete metric while another reports it as *undisclosed / contact sales only*.
+    4. **Temporal Progression**: Detects when conflicting metrics originate from significantly different publication dates (>= 180 days apart), categorizing the conflict as `ConflictStatus.EXPLAINED` with a progression note.
+  - Enforced the invariant: **Never silently choose between conflicting values**. All competing claims, source IDs, source URLs, and verbatim evidence excerpts are preserved in `CompetingValue` records attached to the `Conflict`.
+  - Added `entity`, `attribute`, and `resolution_note` to the `Conflict` model in `backend/app/models/conflict.py`.
+  - Integrated `ConflictDetector` directly into `Checker` in `backend/app/workflow/checker.py`.
+  - Ensured conflicts flow cleanly into `ResearchState.conflicts` via `reduce_conflicts`.
+  - Exported conflict symbols in `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_conflicts.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/conflicts.py`
+  - Created: `backend/tests/test_conflicts.py`
+  - Modified: `backend/app/models/conflict.py`
+  - Modified: `backend/app/workflow/checker.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `backend/tests/test_checker.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 67/67 unit & integration tests passed in 4.00s across the entire test suite (7 dedicated conflict tests).
+  - Verified numeric conflict detection on Indian currency metrics (e.g. ₹100 Cr vs ₹130 Cr).
+  - Verified qualitative/textual conflict detection on headquarters locations (e.g. Chennai vs Pleasanton).
+  - Verified binary antonym conflict detection (free tier vs paid subscription).
+  - Verified disclosure discrepancy detection (concrete pricing vs undisclosed/contact sales).
+  - Verified formatting equivalence filtering: identical metrics with cosmetic differences (e.g. `₹1,200/user/mo` vs `1200 per user per month`) do not trigger false conflicts.
+  - Verified contextual resolution analysis: temporal discrepancies across publication dates are flagged as `ConflictStatus.EXPLAINED`.
+  - Verified complete provenance preservation: `competing_values` retains verbatim evidence snippets and source links.
+  - Verified state reducer integration with `reduce_conflicts()`.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Resolution analysis does not discard conflicting data; it provides explanatory context (e.g. temporal updates or tier variations) while keeping all competing values accessible for the Comparer and Writer.
+- **What should be done next**:
+  - Task 16: Research Retry Loop (implementing bounded conditional re-research for facts with weak evidence or high uncertainty).
+
+
 
 
 

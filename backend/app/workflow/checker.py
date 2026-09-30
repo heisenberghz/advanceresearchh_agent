@@ -18,6 +18,7 @@ from app.models.conflict import CompetingValue, Conflict
 from app.models.enums import ConflictStatus, TrustTag, VerificationStatus
 from app.models.fact import Fact, VerificationResult
 from app.models.source import Source
+from app.workflow.conflicts import ConflictDetector, get_conflict_detector
 from app.workflow.trust import (
     TrustRulesConfig,
     TrustScoreBreakdown,
@@ -25,6 +26,7 @@ from app.workflow.trust import (
 )
 
 logger = logging.getLogger("researchops.checker")
+
 
 
 # High-credibility and authoritative domains
@@ -113,9 +115,12 @@ class Checker:
         self,
         openrouter_client: Optional[OpenRouterClient] = None,
         trust_config: Optional[TrustRulesConfig] = None,
+        conflict_detector: Optional[ConflictDetector] = None,
     ):
         self.openrouter_client = openrouter_client
         self.trust_config = trust_config or TrustRulesConfig()
+        self.conflict_detector = conflict_detector or get_conflict_detector()
+
 
 
     def evaluate_source_quality(self, entity: str, source: Source) -> Tuple[float, bool]:
@@ -219,90 +224,9 @@ class Checker:
         sources_map: Dict[str, Source],
         research_run_id: str,
     ) -> Dict[str, List[Conflict]]:
-        """Detect and preserve conflicting claims across facts for the same entity and attribute.
-        
-        Returns a mapping from fact_id -> list of associated Conflict records.
-        """
-        # Group facts by normalized (entity, attribute)
-        groups: Dict[Tuple[str, str], List[Fact]] = {}
-        for f in facts:
-            key = (f.entity.strip().lower(), f.attribute.strip().lower())
-            groups.setdefault(key, []).append(f)
+        """Detect and preserve conflicting claims across facts for the same entity and attribute."""
+        return self.conflict_detector.detect_conflicts(facts, sources_map, research_run_id)
 
-        fact_conflicts: Dict[str, List[Conflict]] = {f.id: [] for f in facts}
-
-        for (entity_key, attr_key), group in groups.items():
-            if len(group) < 2:
-                continue
-
-            # Compare pairs in the group
-            for i in range(len(group)):
-                for j in range(i + 1, len(group)):
-                    f1 = group[i]
-                    f2 = group[j]
-
-                    norm1 = clean_normalized_text(f1.value)
-                    norm2 = clean_normalized_text(f2.value)
-
-                    if norm1 == norm2:
-                        continue
-
-                    # Distinct values: check if they are truly contradictory
-                    num1 = extract_numeric_tokens(f1.value)
-                    num2 = extract_numeric_tokens(f2.value)
-
-                    is_conflict = False
-                    if num1 and num2 and num1 != num2:
-                        is_conflict = True
-                    elif not num1 and not num2 and norm1 != norm2:
-                        is_conflict = True
-
-                    if is_conflict:
-                        # Construct Conflict record preserving all competing values and sources
-                        src_id1 = f1.source_ids[0] if f1.source_ids else None
-                        src_id2 = f2.source_ids[0] if f2.source_ids else None
-                        src_url1 = sources_map[src_id1].url if src_id1 and src_id1 in sources_map else None
-                        src_url2 = sources_map[src_id2].url if src_id2 and src_id2 in sources_map else None
-
-                        ev1 = f1.evidence[0].text if f1.evidence else None
-                        ev2 = f2.evidence[0].text if f2.evidence else None
-
-                        conflict = Conflict(
-                            id=f"conf-{f1.id[:6]}-{f2.id[:6]}",
-                            research_run_id=research_run_id,
-                            description=(
-                                f"Contradictory values for {f1.entity} ({f1.attribute}): "
-                                f"'{f1.value}' vs '{f2.value}'"
-                            ),
-                            status=ConflictStatus.UNRESOLVED,
-                            competing_values=[
-                                CompetingValue(
-                                    value=f1.value,
-                                    source_id=src_id1,
-                                    source_url=src_url1,
-                                    evidence=ev1,
-                                ),
-                                CompetingValue(
-                                    value=f2.value,
-                                    source_id=src_id2,
-                                    source_url=src_url2,
-                                    evidence=ev2,
-                                ),
-                            ],
-                            supporting_sources=[s for s in [src_id1, src_id2] if s],
-                        )
-
-                        fact_conflicts[f1.id].append(conflict)
-                        fact_conflicts[f2.id].append(conflict)
-                        logger.warning(
-                            "Detected conflict on %s (%s): '%s' vs '%s'",
-                            f1.entity,
-                            f1.attribute,
-                            f1.value,
-                            f2.value,
-                        )
-
-        return fact_conflicts
 
     def verify_fact(
         self,
@@ -423,7 +347,11 @@ class Checker:
         )
 
 
-def get_checker(trust_config: Optional[TrustRulesConfig] = None) -> Checker:
+def get_checker(
+    trust_config: Optional[TrustRulesConfig] = None,
+    conflict_detector: Optional[ConflictDetector] = None,
+) -> Checker:
     """Factory creating default Checker instance."""
-    return Checker(trust_config=trust_config)
+    return Checker(trust_config=trust_config, conflict_detector=conflict_detector)
+
 
