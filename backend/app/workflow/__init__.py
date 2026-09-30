@@ -19,6 +19,7 @@ from app.workflow.state import (
     reduce_retry_counts,
     reduce_sources,
 )
+from app.workflow.graph import create_research_graph, run_research_pipeline
 
 __all__ = [
     "Planner",
@@ -40,4 +41,6 @@ __all__ = [
     "reduce_gaps",
     "reduce_retry_counts",
     "reduce_errors",
+    "create_research_graph",
+    "run_research_pipeline",
 ]

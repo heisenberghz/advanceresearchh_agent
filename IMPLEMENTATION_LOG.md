@@ -328,6 +328,38 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 12: End-to-End Research Workflow (assembling Planner and Parallel Researchers into an executable LangGraph pipeline).
 
+---
+
+## 2026-09-30 18:13 IST — Task 12: End-to-End Research Workflow
+
+- **Task**: TASK 12 — End-to-End Research Workflow (Phase 4: Core Research Workflow)
+- **What was implemented**:
+  - Implemented `create_research_graph()` in `backend/app/workflow/graph.py` compiling an initial LangGraph `StateGraph(ResearchState)`.
+  - Connected workflow nodes: `START -> planner -> parallel_research -> END`.
+    - `planner_node`: Takes initial state question and run ID, invokes `Planner.plan()`, and updates `assumptions`, `entities`, `research_jobs`, and sets `workflow_status="planned"`.
+    - `research_node`: Takes planned jobs, executes them concurrently via `ParallelResearcher.execute_jobs()`, and updates `research_jobs`, `facts`, `sources`, and sets `workflow_status="researched"`.
+  - Implemented `run_research_pipeline()` facilitating programmatic execution with custom injected dependencies (for dependency injection and hermetic test isolation).
+  - Preserved complete provenance invariants end-to-end: every extracted `Fact` retains valid `source_ids` and verbatim `Evidence` text, and all cited `source_ids` are present in `sources`.
+  - Created automated test suite in `backend/tests/test_graph.py` validating graph compilation and end-to-end pipeline execution with realistic mocked search responses.
+  - Exported `create_research_graph` and `run_research_pipeline` in `backend/app/workflow/__init__.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/graph.py`
+  - Created: `backend/tests/test_graph.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 42/42 unit & integration tests passed in 4.07s across the entire test suite.
+  - Verified clean graph compilation without topology errors.
+  - Verified full CRM research question execution: state transitions from `START -> planned -> researched -> END`.
+  - Verified all generated research jobs transition to `JobStatus.COMPLETED`.
+  - Verified fact provenance: 100% of facts link to valid sources in `final_state["sources"]` with non-empty evidence snippets.
+- **Result**: Success. Phase 4 (Core Research Workflow) is now fully completed!
+- **Important decisions or issues**:
+  - Kept graph architecture composable so Phase 5 (Checker, Verification, Conflicts, Retries) and Phase 6 (Comparer, Writer) can plug directly into the compiled graph topology without altering existing nodes.
+- **What should be done next**:
+  - Phase 5: Verification System (starting with Task 13 — Checker: independent fact verification evaluating source existence, snippet relevance, freshness, and corroboration).
+
+
 
 
 
