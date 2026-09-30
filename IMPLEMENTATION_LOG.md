@@ -290,6 +290,45 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 11: LangGraph State (defining central workflow state and safe deduplicating state reducers for LangGraph graph execution).
 
+---
+
+## 2026-09-30 18:06 IST — Task 11: LangGraph State
+
+- **Task**: TASK 11 — LangGraph State (Phase 4: Core Research Workflow)
+- **What was implemented**:
+  - Built the central `ResearchState` TypedDict in `backend/app/workflow/state.py` containing all 16 conceptual state fields specified in `TECH_SPEC.md` Section 17 (`research_id`, `question`, `assumptions`, `entities`, `research_jobs`, `research_results`, `facts`, `sources`, `verification_results`, `conflicts`, `gaps`, `comparison`, `report`, `retry_counts`, `workflow_status`, `errors`).
+  - Implemented custom deterministic reducer functions:
+    - `reduce_facts`: Merges facts by `fact.id`, updates verification/trust fields in-place, merges newly cited source IDs and evidence text without creating duplicate facts.
+    - `reduce_sources`: Deduplicates web sources by `source.id` and canonical URL.
+    - `reduce_jobs`: Merges jobs by `job.id`, updating status, retry attempts, and result data.
+    - `reduce_conflicts`: Merges conflicts by `conflict.id`.
+    - `reduce_gaps`: Merges research gaps by `gap.id`.
+    - `reduce_retry_counts`: Merges retry dictionaries taking the maximum count per job ID.
+    - `merge_unique_strings`: Union of strings preserving order.
+  - Implemented `create_initial_research_state(research_id, question)` state factory.
+  - Added `updated_at` to `Fact` model in `backend/app/models/fact.py` ensuring timestamp updates survive merges.
+  - Exported state and reducers from `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_state.py` including a compiled, executable LangGraph `StateGraph` testing parallel branch state merging.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/state.py`
+  - Created: `backend/tests/test_state.py`
+  - Modified: `backend/app/models/fact.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 40/40 unit tests passed in 4.29s across the entire test suite.
+  - Verified `reduce_facts` prevents duplicate records while preserving multi-source evidence.
+  - Verified `reduce_sources` URL-based deduplication.
+  - Verified `reduce_jobs` and `reduce_retry_counts` taking maximum attempts.
+  - Compiled and executed an actual LangGraph `StateGraph(ResearchState)` with 2 concurrent worker nodes: verified zero dropped facts, sources, or retry counts in the final state.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Replaced naive list addition (`operator.add`) with identity-preserving reducers to prevent duplicate facts on retries and parallel execution.
+  - Provenance integrity (Fact -> Source -> Evidence) remains completely intact through all state merges.
+- **What should be done next**:
+  - Task 12: End-to-End Research Workflow (assembling Planner and Parallel Researchers into an executable LangGraph pipeline).
+
+
 
 
 

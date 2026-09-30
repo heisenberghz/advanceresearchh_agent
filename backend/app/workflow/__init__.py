@@ -7,6 +7,18 @@ from app.workflow.parallel import (
     ParallelResearchBatchResult,
     get_parallel_researcher,
 )
+from app.workflow.state import (
+    ResearchState,
+    create_initial_research_state,
+    merge_unique_strings,
+    reduce_conflicts,
+    reduce_errors,
+    reduce_facts,
+    reduce_gaps,
+    reduce_jobs,
+    reduce_retry_counts,
+    reduce_sources,
+)
 
 __all__ = [
     "Planner",
@@ -18,4 +30,14 @@ __all__ = [
     "ParallelResearcher",
     "ParallelResearchBatchResult",
     "get_parallel_researcher",
+    "ResearchState",
+    "create_initial_research_state",
+    "merge_unique_strings",
+    "reduce_jobs",
+    "reduce_facts",
+    "reduce_sources",
+    "reduce_conflicts",
+    "reduce_gaps",
+    "reduce_retry_counts",
+    "reduce_errors",
 ]

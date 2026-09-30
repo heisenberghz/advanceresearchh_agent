@@ -35,6 +35,11 @@ class Fact(BaseModel):
         default=None,
         description="Explanation for the assigned trust tag and status",
     )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Last update timestamp",
+    )
+
 
     @field_validator("entity", "attribute", "value")
     @classmethod
