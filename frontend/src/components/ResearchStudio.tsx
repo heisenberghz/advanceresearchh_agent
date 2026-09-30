@@ -149,12 +149,18 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {comparison.dimensions?.map((dim) => (
+                  {(comparison.metrics || comparison.dimensions || []).map((dim) => (
                     <tr key={dim} className="hover:bg-slate-50/60 transition">
                       <td className="p-3 font-semibold text-slate-800 bg-slate-50/30">{dim}</td>
                       {comparison.entities.map((entity) => {
                         const cell = comparison.cells?.find(
-                          (c) => c.entity.toLowerCase() === entity.toLowerCase() && c.dimension.toLowerCase() === dim.toLowerCase()
+                          (c) => {
+                            const cDim = (c.metric || c.dimension || "").toLowerCase();
+                            const cEnt = (c.entity || "").toLowerCase();
+                            const eMatch = cEnt === entity.toLowerCase() || cEnt.includes(entity.toLowerCase()) || entity.toLowerCase().includes(cEnt);
+                            const dMatch = cDim === dim.toLowerCase() || cDim.includes(dim.toLowerCase()) || dim.toLowerCase().includes(cDim);
+                            return eMatch && dMatch;
+                          }
                         );
                         return (
                           <td key={entity} className="p-3 text-slate-700">
