@@ -63,5 +63,35 @@ Each entry records what changed, verification results, key decisions, and the ne
   - Configured `Settings` so the backend can start and serve `/health` even if API keys are not yet configured in `.env`, while raising clear descriptive validation errors if unconfigured research is triggered.
   - Verified package installation and execution cleanly on Python 3.14.3.
 - **What should be done next**:
-  - Task 3: Frontend Foundation (Next.js, TypeScript, Tailwind CSS, shadcn/ui, basic research landing layout).
+  - Task 4: Supabase Database Foundation (schema DDL, Supabase client wrapper, repository CRUD operations).
+
+---
+
+## 2026-09-30 16:35 IST — Task 4: Supabase Database Foundation
+
+- **Task**: TASK 4 — Supabase Database Foundation (Phase 2: Database)
+- **What was implemented**:
+  - Authored comprehensive PostgreSQL schema script in `backend/app/db/schema.sql` covering all 7 core entities from `TECH_SPEC.md` Section 25 (`research_runs`, `research_jobs`, `sources`, `facts`, `conflicts`, `research_gaps`, `reports`) with foreign key constraints, indexes, and JSONB fields.
+  - Installed and verified `supabase>=2.7.0` in the backend virtualenv.
+  - Implemented `DatabaseClient` in `backend/app/db/client.py` providing connection lifecycle management, health ping checks, and graceful handling of unconfigured credentials.
+  - Built `ResearchRepository` in `backend/app/db/repository.py` supporting complete CRUD operations (runs, jobs, sources, facts, conflicts, gaps, reports) with an in-memory test fallback for rapid local/offline test execution.
+  - Created automated test suite in `backend/tests/test_database.py`.
+- **Files created/modified**:
+  - Created: `backend/app/db/__init__.py`
+  - Created: `backend/app/db/schema.sql`
+  - Created: `backend/app/db/client.py`
+  - Created: `backend/app/db/repository.py`
+  - Created: `backend/tests/test_database.py`
+  - Modified: `backend/requirements.txt`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 7/7 unit tests passed in 5.09s (including schema completeness, client ping behavior, and repository CRUD lifecycle).
+  - Verified clean error handling when Supabase credentials are not present.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Provided an in-memory repository fallback inside `ResearchRepository` so local development and test runs remain 100% unblocked even if external Supabase credentials are not yet provisioned.
+  - Schema preserves foreign keys with `ON DELETE CASCADE` from child tables to `research_runs` for clean data lifecycle management.
+- **What should be done next**:
+  - Task 5: Research Data Models (Pydantic validation schemas for Fact, Source, Evidence, Conflict, Gap, VerificationResult, Comparison, Report).
+
 
