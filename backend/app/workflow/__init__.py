@@ -2,6 +2,11 @@
 
 from app.workflow.planner import Planner, ResearchPlan, get_planner
 from app.workflow.researcher import Researcher, ResearcherResult, get_researcher
+from app.workflow.parallel import (
+    ParallelResearcher,
+    ParallelResearchBatchResult,
+    get_parallel_researcher,
+)
 
 __all__ = [
     "Planner",
@@ -10,4 +15,7 @@ __all__ = [
     "Researcher",
     "ResearcherResult",
     "get_researcher",
+    "ParallelResearcher",
+    "ParallelResearchBatchResult",
+    "get_parallel_researcher",
 ]

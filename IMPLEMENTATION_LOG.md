@@ -260,6 +260,37 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 10: Parallel Research Execution (running multiple Researcher jobs concurrently with isolated failure boundaries).
 
+---
+
+## 2026-09-30 18:01 IST — Task 10: Parallel Research Execution
+
+- **Task**: TASK 10 — Parallel Research Execution (Phase 4: Core Research Workflow)
+- **What was implemented**:
+  - Built `ParallelResearcher` in `backend/app/workflow/parallel.py` to coordinate concurrent execution of independent `ResearchJob` sub-tasks using `asyncio.gather`.
+  - Added bounded concurrency using an `asyncio.Semaphore` (configurable, default 4) to prevent exceeding external API rate limits.
+  - Implemented strict error isolation: if any single research job fails (network error, timeout, search quota), it does NOT abort the batch; the failed job is marked `JobStatus.FAILED` with error diagnostics while all successful jobs continue and merge.
+  - Built `ParallelResearchBatchResult` aggregating updated jobs, merged facts, and deduplicated cited sources.
+  - Implemented URL-based source deduplication so identical web pages cited by different workers produce a single unique `Source` record while preserving all linked facts.
+  - Exported parallel runner symbols from `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_parallel.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/parallel.py`
+  - Created: `backend/tests/test_parallel.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 35/35 unit tests passed in 3.80s across the test suite.
+  - Verified empty batch handling.
+  - Verified concurrent execution and fact merging across multiple entities (Zoho, Freshworks, Salesforce).
+  - Verified isolated error boundary: simulated failure in one job did not stop other jobs from completing and returning facts.
+  - Verified URL-based source deduplication across concurrent jobs.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Managed concurrency via `asyncio.Semaphore` directly without heavy worker queues or distributed infrastructure, keeping architecture simple and reliable for the hackathon.
+- **What should be done next**:
+  - Task 11: LangGraph State (defining central workflow state and safe deduplicating state reducers for LangGraph graph execution).
+
+
 
 
 
