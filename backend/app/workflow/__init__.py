@@ -19,6 +19,7 @@ from app.workflow.state import (
     reduce_retry_counts,
     reduce_sources,
 )
+from app.workflow.checker import Checker, CheckerBatchResult, get_checker
 from app.workflow.graph import create_research_graph, run_research_pipeline
 
 __all__ = [
@@ -31,12 +32,16 @@ __all__ = [
     "ParallelResearcher",
     "ParallelResearchBatchResult",
     "get_parallel_researcher",
+    "Checker",
+    "CheckerBatchResult",
+    "get_checker",
     "ResearchState",
     "create_initial_research_state",
     "merge_unique_strings",
     "reduce_jobs",
     "reduce_facts",
     "reduce_sources",
+    "reduce_verification_results",
     "reduce_conflicts",
     "reduce_gaps",
     "reduce_retry_counts",
@@ -44,3 +49,4 @@ __all__ = [
     "create_research_graph",
     "run_research_pipeline",
 ]
+

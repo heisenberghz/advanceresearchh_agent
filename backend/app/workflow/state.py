@@ -127,6 +127,17 @@ def reduce_sources(
     return list(source_map_by_id.values())
 
 
+def reduce_verification_results(
+    existing: Optional[List[VerificationResult]],
+    updates: Optional[List[VerificationResult]],
+) -> List[VerificationResult]:
+    """Merge VerificationResult records by fact_id."""
+    res_map: Dict[str, VerificationResult] = {r.fact_id: r for r in (existing or [])}
+    for up in updates or []:
+        res_map[up.fact_id] = up
+    return list(res_map.values())
+
+
 def reduce_conflicts(
     existing: Optional[List[Conflict]],
     updates: Optional[List[Conflict]],
@@ -200,7 +211,7 @@ class ResearchState(TypedDict):
     sources: Annotated[List[Source], reduce_sources]
 
     # Verification, Conflicts & Gaps
-    verification_results: Annotated[List[VerificationResult], lambda x, y: (x or []) + (y or [])]
+    verification_results: Annotated[List[VerificationResult], reduce_verification_results]
     conflicts: Annotated[List[Conflict], reduce_conflicts]
     gaps: Annotated[List[ResearchGap], reduce_gaps]
 
