@@ -65,6 +65,9 @@ Extract structured facts strictly matching the schema.
 """
 
 
+from app.workflow.cache import ResearchCache, get_research_cache
+
+
 class Researcher:
     """Independent researcher unit that executes a single research job."""
 
@@ -73,13 +76,15 @@ class Researcher:
         tavily_client: Optional[TavilyClient] = None,
         openrouter_client: Optional[OpenRouterClient] = None,
         settings: Optional[Settings] = None,
+        cache: Optional[ResearchCache] = None,
     ):
         self.settings = settings or get_settings()
         self.tavily = tavily_client or get_tavily_client()
         self.llm = openrouter_client or get_openrouter_client()
+        self.cache = cache or get_research_cache()
 
     async def execute_job(self, job: ResearchJob) -> ResearcherResult:
-        """Execute a single research job.
+        """Execute a single research job with result reuse and caching (Task 36).
 
         Args:
             job: The ResearchJob to execute.
@@ -93,26 +98,54 @@ class Researcher:
 
         logger.info("Executing ResearchJob %s (Attempt %d): %s", job.id, job.attempts, job.description)
 
+        # 0. Check result reuse cache (Task 36)
+        if job.entity and job.attribute:
+            reusable = self.cache.get_reusable_results(
+                job.entity, job.attribute, job.research_run_id, job.id
+            )
+            if reusable:
+                cached_facts, cached_sources = reusable
+                job.status = JobStatus.COMPLETED
+                job.result_data = {
+                    "reused_from_cache": True,
+                    "sources_found": len(cached_sources),
+                    "sources_cited": len(cached_sources),
+                    "facts_extracted": len(cached_facts),
+                }
+                logger.info(
+                    "⚡ Reused cached facts for job %s (%s - %s): %d facts, %d sources",
+                    job.id,
+                    job.entity,
+                    job.attribute,
+                    len(cached_facts),
+                    len(cached_sources),
+                )
+                return ResearcherResult(job=job, facts=cached_facts, sources=cached_sources)
+
         # 1. Formulate targeted search query
         query = self._generate_search_query(job)
 
-        # 2. Retrieve web sources via Tavily
-        try:
-            sources = await self.tavily.search_to_sources(
-                query=query,
-                research_run_id=job.research_run_id,
-                max_results=self.settings.max_searches_per_job,
-            )
-        except TavilyError as exc:
-            logger.warning("Tavily search failed for job %s: %s", job.id, exc)
-            job.status = JobStatus.FAILED
-            job.error = str(exc)
-            return ResearcherResult(job=job, facts=[], sources=[], error=str(exc))
-        except Exception as exc:
-            logger.error("Unexpected error searching for job %s: %s", job.id, exc, exc_info=True)
-            job.status = JobStatus.FAILED
-            job.error = str(exc)
-            return ResearcherResult(job=job, facts=[], sources=[], error=str(exc))
+        # 2. Retrieve web sources (check query cache first)
+        sources = self.cache.get_cached_sources(query, job.research_run_id)
+        if sources is None:
+            try:
+                sources = await self.tavily.search_to_sources(
+                    query=query,
+                    research_run_id=job.research_run_id,
+                    max_results=self.settings.max_searches_per_job,
+                )
+                if sources:
+                    self.cache.set_cached_sources(query, sources)
+            except TavilyError as exc:
+                logger.warning("Tavily search failed for job %s: %s", job.id, exc)
+                job.status = JobStatus.FAILED
+                job.error = str(exc)
+                return ResearcherResult(job=job, facts=[], sources=[], error=str(exc))
+            except Exception as exc:
+                logger.error("Unexpected error searching for job %s: %s", job.id, exc, exc_info=True)
+                job.status = JobStatus.FAILED
+                job.error = str(exc)
+                return ResearcherResult(job=job, facts=[], sources=[], error=str(exc))
 
         if not sources:
             logger.info("No web sources returned for job %s query '%s'", job.id, query)
@@ -126,6 +159,10 @@ class Researcher:
         # Filter sources to keep only those that support extracted facts (or all if few)
         cited_source_ids = {s_id for fact in facts for s_id in fact.source_ids}
         relevant_sources = [s for s in sources if s.id in cited_source_ids or not cited_source_ids]
+
+        # 4. Cache extracted facts for future queries
+        if facts and job.entity and job.attribute:
+            self.cache.set_reusable_results(job.entity, job.attribute, facts, relevant_sources)
 
         job.status = JobStatus.COMPLETED
         job.result_data = {

@@ -827,6 +827,95 @@ Each entry records what changed, verification results, key decisions, and the ne
   - Executed live automated Chrome browser test via browser subagent covering input, progress, studio, and report views.
 - **Result**: Success. Tasks 24 through 33 and Task 35 completely built, verified, and documented!
 
+---
+
+## 2026-10-01 01:20 IST — Task 34: PDF Export & Pipeline Robustness Refinements
+
+- **Task**: TASK 34 — PDF Export (Phase 10: Export and Persistence) + Pipeline Robustness & Verification
+- **What was implemented**:
+  - **Task 34 (PDF Export Engine)**:
+    - Installed `reportlab>=4.0.0` in `backend/requirements.txt` and built `backend/app/workflow/pdf_export.py`.
+    - Implemented a clean, publication-grade editorial styling engine (A4 page geometry, high-contrast headings, custom header/footer numbering canvas, auto-wrapping table cells).
+    - Structured PDF dossier containing:
+      1. Cover metadata block (Question, Run ID, Generation Timestamp, Trust Guarantees summary).
+      2. Executive Summary & Scoping Assumptions.
+      3. 2D Comparison Matrix Table (Entities vs Dimensions with color-coded trust tags 🟢 🟡 🔴).
+      4. Detailed Findings & Grounding with verbatim evidence quotes and cited source badges.
+      5. Preserved Contradictions & Conflicts (Side-by-side claims and context).
+      6. Explicit Research Gaps (Undisclosed / unverified metrics with attempt counts).
+      7. Traceable Bibliography & Sources index with external URLs.
+    - Implemented `GET /research/{id}/export/pdf` endpoint in `backend/app/routers/research.py` returning binary PDF with Content-Disposition attachment.
+    - Added clean editorial **"Export (.pdf)"** button in `frontend/src/components/ReportView.tsx` with direct file download triggers.
+  - **Pipeline Robustness & Bug Fixes**:
+    - **Planner Model Validation**: Added `@model_validator(mode="before")` on `RawPlannerOutput` and `RawPlannerJob` in `backend/app/workflow/planner.py` to seamlessly unwrap nested structures and tolerate LLM aliases (`key_entities`, `research_jobs`, `task`, `dimension`). Added dynamic regex comparison extraction in fallback heuristics.
+    - **Comparison Matrix Key Matching**: Added resilient fuzzy substring matching in `backend/app/workflow/comparer.py` and dual dimension/metric key support in `frontend/src/lib/api.ts` & `frontend/src/components/ResearchStudio.tsx`, eliminating empty matrix cells.
+    - **Fact Extraction Entity Resiliency**: Made `entity` and `attribute` optional in `RawFactItem` in `backend/app/workflow/researcher.py`, defaulting cleanly to the job target if omitted in LLM JSON output.
+    - **Supabase Serialization Safety**: Built `_serialize_for_db` in `backend/app/db/repository.py` to recursively serialize Python `datetime` objects and Enums, preventing PostgreSQL serialization exceptions.
+    - **Test Suite Isolation**: Standardized repository fixture in `backend/tests/test_api_research.py` with `DatabaseClient(None)` so local test runs never pollute the live Supabase database or consume external API search credits.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/pdf_export.py`
+  - Modified: `backend/app/routers/research.py`
+  - Modified: `backend/app/db/repository.py`
+  - Modified: `backend/app/workflow/planner.py`
+  - Modified: `backend/app/workflow/comparer.py`
+  - Modified: `backend/app/workflow/researcher.py`
+  - Modified: `backend/requirements.txt`
+  - Modified: `backend/tests/test_api_research.py`
+  - Modified: `backend/tests/test_gaps.py`
+  - Modified: `backend/tests/test_health.py`
+  - Modified: `backend/tests/test_openrouter.py`
+  - Modified: `backend/tests/test_planner.py`
+  - Modified: `backend/tests/test_tavily.py`
+  - Modified: `frontend/src/components/ReportView.tsx`
+  - Modified: `frontend/src/components/ResearchStudio.tsx`
+  - Modified: `frontend/src/lib/api.ts`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests/` across all 20 backend test files: **103 passed out of 103 tests (100% pass rate)** in 181s.
+  - Executed `npm run build` in `frontend/`: Compiled successfully in Next.js 16 (Turbopack), 0 TypeScript errors.
+  - Generated standalone sample PDF verification test: clean PDF buffer produced (`2,880 bytes`).
+- **Result**: Success. Task 34 is 100% complete and verified!
+
+---
+
+## 2026-10-01 01:48 IST — Task 36: Smart Search Caching & Result Reuse
+
+- **Task**: TASK 36 — Result Reuse / Caching (Phase 10: Export and Persistence)
+- **What was implemented**:
+  - **Result & Query Caching Architecture (`backend/app/workflow/cache.py`)**:
+    - Created thread-safe, bounded in-memory `ResearchCache` with configurable TTL (default 1 hour / 3600 seconds) and LRU eviction policy (capped at 200 items).
+    - Added **Query-Level Caching**: Caches normalized web search queries and returns cloned `Source` objects rebound to the current `research_run_id` with fresh IDs, eliminating redundant network calls to Tavily.
+    - Added **Entity + Attribute Result Reuse**: Caches extracted verified facts and sources by `(entity.lower(), attribute.lower())`. If an identical entity attribute is targeted in compatible research, facts and sources are immediately reused with proper ID cloning and evidence re-linking, skipping both web search and LLM extraction latency.
+  - **Researcher Component Integration (`backend/app/workflow/researcher.py`)**:
+    - Connected `ResearchCache` into `Researcher.execute_job()`:
+      1. Step 0: Checks entity + attribute result reuse before formulating queries.
+      2. Step 2: Checks search query cache before making Tavily API calls.
+      3. Step 4: Automatically caches extracted facts for future queries upon job completion.
+    - Added `reused_from_cache: True` indicator in job `result_data` for auditability and transparency.
+  - **Workflow Package Exports (`backend/app/workflow/__init__.py`)**:
+    - Exported `ResearchCache` and `get_research_cache()` in `__all__`.
+  - **Automated Test Suite (`backend/tests/test_cache.py`)**:
+    - Built comprehensive unit test suite covering:
+      1. Query hit/miss with case-insensitivity and ID rebinding.
+      2. TTL expiration.
+      3. Bounded LRU eviction.
+      4. Entity & attribute fact reuse and evidence link mapping.
+      5. Full Researcher integration test verifying Tavily search is called only once and skipped on second identical execution.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/cache.py`
+  - Created: `backend/tests/test_cache.py`
+  - Modified: `backend/app/workflow/researcher.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `backend/tests/test_comparer.py`
+  - Modified: `backend/tests/test_gaps.py`
+  - Modified: `backend/tests/test_researcher.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests/` across all 21 backend test files: **108 passed out of 108 tests (100% pass rate)** in 220s.
+- **Result**: Success. Task 36 is 100% complete and fully verified!
+
+
+
 
 
 

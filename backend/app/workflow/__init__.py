@@ -1,6 +1,7 @@
 """LangGraph workflow components for ResearchOps."""
 
 from app.workflow.planner import Planner, ResearchPlan, get_planner
+from app.workflow.cache import ResearchCache, get_research_cache
 from app.workflow.researcher import Researcher, ResearcherResult, get_researcher
 from app.workflow.parallel import (
     ParallelResearcher,
@@ -38,6 +39,8 @@ __all__ = [
     "Planner",
     "ResearchPlan",
     "get_planner",
+    "ResearchCache",
+    "get_research_cache",
     "Researcher",
     "ResearcherResult",
     "get_researcher",

@@ -235,7 +235,8 @@ async def test_langgraph_pipeline_persists_gaps_on_unverified_research():
         )
 
         with patch.object(planner, "plan", return_value=mock_plan):
-            repo = ResearchRepository()
+            from app.db.client import DatabaseClient
+            repo = ResearchRepository(DatabaseClient(None))
             gap_detector = GapDetector(repository=repo)
 
             final_state = await run_research_pipeline(
@@ -244,6 +245,7 @@ async def test_langgraph_pipeline_persists_gaps_on_unverified_research():
                 planner=planner,
                 parallel_researcher=parallel_researcher,
                 gap_detector=gap_detector,
+                repository=repo,
             )
 
             # Invariant 1: Zoho pricing is verified (GREEN)

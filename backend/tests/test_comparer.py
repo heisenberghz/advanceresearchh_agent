@@ -337,11 +337,15 @@ async def test_langgraph_pipeline_produces_comparison_matrix():
         )
 
         with patch.object(planner, "plan", return_value=mock_plan):
+            from app.db.client import DatabaseClient
+            from app.db.repository import ResearchRepository
+            repo = ResearchRepository(DatabaseClient(None))
             final_state = await run_research_pipeline(
                 question=question,
                 research_id="run-compare-test",
                 planner=planner,
                 parallel_researcher=parallel_researcher,
+                repository=repo,
             )
 
             # Invariant: final_state['comparison'] is populated with a valid ComparisonMatrix

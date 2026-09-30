@@ -17,6 +17,13 @@ from app.workflow.researcher import (
 )
 
 
+@pytest.fixture(autouse=True)
+def clean_cache():
+    """Clear research cache before each test."""
+    from app.workflow.cache import get_research_cache
+    get_research_cache().clear()
+
+
 @pytest.fixture
 def sample_job():
     """Create a sample research job for testing."""
