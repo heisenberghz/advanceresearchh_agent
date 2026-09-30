@@ -94,4 +94,77 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 5: Research Data Models (Pydantic validation schemas for Fact, Source, Evidence, Conflict, Gap, VerificationResult, Comparison, Report).
 
+---
+
+## 2026-09-30 17:15 IST — Task 5: Research Data Models
+
+- **Task**: TASK 5 — Research Data Models (Phase 2: Database & Domain Models)
+- **What was implemented**:
+  - Created domain enumerations in `backend/app/models/enums.py`: `TrustTag` (GREEN, YELLOW, RED), `VerificationStatus` (verified, uncertain, conflicting, unsupported, missing), `JobStatus`, `RunStatus`, and `ConflictStatus`.
+  - Created source & provenance models in `backend/app/models/source.py`: `Evidence` (verbatim supporting excerpt, location, relevance) and `Source` (HTTP/HTTPS validated URL, title, domain, publisher, timestamps).
+  - Created fact models in `backend/app/models/fact.py`: `Fact` (entity, attribute, value, source IDs, evidence list, trust tag, verification status) and `VerificationResult` (Checker output).
+  - Created conflict models in `backend/app/models/conflict.py`: `CompetingValue` and `Conflict` (enforcing a minimum of 2 competing claims with source references).
+  - Created gap model in `backend/app/models/gap.py`: `ResearchGap` (explicitly representing verified missing information).
+  - Created job model in `backend/app/models/job.py`: `ResearchJob` (representing sub-tasks dispatched to researchers).
+  - Created comparison models in `backend/app/models/comparison.py`: `ComparisonCell` (entity, metric, value, trust tag, fact ID, source IDs) and `ComparisonMatrix`.
+  - Created report model in `backend/app/models/report.py`: `ResearchReport` (synthesizing summary, assumptions, comparison matrix, findings, conflicts, gaps, and source bibliography).
+  - Created run model in `backend/app/models/run.py`: `ResearchRun` (lifecycle state for business questions).
+  - Exposed all models cleanly from `backend/app/models/__init__.py`.
+  - Created automated test suite in `backend/tests/test_models.py`.
+- **Files created/modified**:
+  - Created: `backend/app/models/__init__.py`
+  - Created: `backend/app/models/enums.py`
+  - Created: `backend/app/models/source.py`
+  - Created: `backend/app/models/fact.py`
+  - Created: `backend/app/models/conflict.py`
+  - Created: `backend/app/models/gap.py`
+  - Created: `backend/app/models/job.py`
+  - Created: `backend/app/models/comparison.py`
+  - Created: `backend/app/models/report.py`
+  - Created: `backend/app/models/run.py`
+  - Created: `backend/tests/test_models.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 13/13 unit tests passed in 3.37s.
+  - Verified field validations (URL format validation, non-empty text, question length $>=$ 5, minimum 2 values in conflict, rejection of blank strings).
+  - Verified relational integrity between Facts, Sources, Evidence, and Comparison cells.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Preserved verbatim evidence and source IDs as first-class collections on `Fact` and `ComparisonCell` to guarantee source traceability through all downstream nodes.
+  - Required that `Conflict` holds at least 2 `CompetingValue` objects so single-source observations cannot be falsely categorized as conflicts.
+- **What should be done next**:
+  - Task 6: OpenRouter Integration (reusable client, configurable research/writer models, structured output parsing).
+
+---
+
+## 2026-09-30 17:28 IST — Task 6: OpenRouter Integration
+
+- **Task**: TASK 6 — OpenRouter Integration (Phase 3: External Integrations)
+- **What was implemented**:
+  - Created lightweight, async OpenRouter client in `backend/app/integrations/openrouter.py` using `httpx.AsyncClient`.
+  - Added support for configurable models: `RESEARCH_MODEL` (e.g. `deepseek/deepseek-chat`) via `chat_for_research()` and `WRITER_MODEL` (e.g. `anthropic/claude-3.5-sonnet`) via `chat_for_writer()`.
+  - Implemented `chat_structured()` method that enforces JSON mode, strips markdown code fences (````json ... ````), and validates output directly into Pydantic models.
+  - Implemented resilient timeout and HTTP error handling wrapped in `OpenRouterError` without exposing API keys in error messages or logs.
+  - Added dependency provider `get_openrouter_client()` in `backend/app/integrations/__init__.py`.
+  - Created automated test suite in `backend/tests/test_openrouter.py`.
+- **Files created/modified**:
+  - Created: `backend/app/integrations/__init__.py`
+  - Created: `backend/app/integrations/openrouter.py`
+  - Created: `backend/tests/test_openrouter.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 18/18 unit tests passed in 4.50s across the test suite.
+  - Verified unconfigured error handling when `OPENROUTER_API_KEY` is absent.
+  - Verified model routing (research vs writer models).
+  - Verified structured output extraction and fence stripping into Pydantic models.
+  - Verified HTTP status error and timeout error propagation.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Avoided third-party bloated SDKs in favor of native `httpx.AsyncClient` with explicit connect/read timeouts.
+  - Client remains completely server-side and raises clean `OpenRouterError` when unconfigured.
+- **What should be done next**:
+  - Task 7: Tavily Integration (web search client, snippet and metadata normalization, retrieval timestamps).
+
+
+
 
