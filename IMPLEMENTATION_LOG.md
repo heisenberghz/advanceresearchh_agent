@@ -195,7 +195,38 @@ Each entry records what changed, verification results, key decisions, and the ne
   - Built directly using async HTTP client to ensure non-blocking concurrent research in LangGraph and seamless mocking during tests.
   - Preserved verbatim snippet content as `evidence` and recorded retrieval timestamps for provenance auditability.
 - **What should be done next**:
-  - Phase 4: Task 8 (Planner — converting user business questions into structured research jobs).
+  - Task 8: Planner (converting natural language business questions into structured research jobs).
+
+---
+
+## 2026-09-30 17:50 IST — Task 8: Planner
+
+- **Task**: TASK 8 — Planner (Phase 4: Core Research Workflow)
+- **What was implemented**:
+  - Installed and verified `langgraph>=1.2.0` in the backend virtual environment, updating `backend/requirements.txt`.
+  - Built the strategic `Planner` node in `backend/app/workflow/planner.py` that deconstructs natural language business questions into `ResearchPlan` objects containing scoping assumptions, target entities, comparison dimensions, and executable `ResearchJob` records.
+  - Implemented structured LLM decomposition using `OpenRouterClient.chat_structured()` with `RESEARCH_MODEL` (e.g. DeepSeek).
+  - Implemented deterministic heuristic fallback decomposition to support offline development and testing without live external dependencies.
+  - Enforced unique research job IDs (`job-{run_id[:8]}-{idx}`) linked to `research_run_id` with `status=JobStatus.PENDING`.
+  - Created automated test suite in `backend/tests/test_planner.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/__init__.py`
+  - Created: `backend/app/workflow/planner.py`
+  - Created: `backend/tests/test_planner.py`
+  - Modified: `backend/requirements.txt`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 27/27 unit tests passed in 4.26s across the test suite.
+  - Verified short question rejection ($< 5$ characters).
+  - Verified heuristic decomposition generates multiple structured `ResearchJob` instances with unique IDs.
+  - Verified LLM-driven structured decomposition and mapping to Pydantic domain models.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Resolved Python 3.14 Windows Application Control conflict with `uuid_utils` by providing an automatic fallback to Python 3.14 native standard library `uuid.uuid7()`.
+  - Structured jobs with discrete `entity` and `attribute` tags to enable parallel, isolated execution in downstream Researcher nodes.
+- **What should be done next**:
+  - Task 9: Researcher (executing individual research jobs using Tavily search and structured fact extraction).
+
 
 
 
