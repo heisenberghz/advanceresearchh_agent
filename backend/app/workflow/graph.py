@@ -59,6 +59,17 @@ def create_research_graph(
             question=state["question"],
             research_run_id=state["research_id"],
         )
+        for job in plan.research_jobs:
+            try:
+                _repo.save_research_job(job.model_dump() if hasattr(job, "model_dump") else job)
+            except Exception:
+                pass
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "planned",
+            "research_jobs": plan.research_jobs,
+            "assumptions": plan.assumptions,
+            "entities": plan.entities,
+        })
         return {
             "assumptions": plan.assumptions,
             "entities": plan.entities,
@@ -71,6 +82,27 @@ def create_research_graph(
         jobs = state.get("research_jobs", [])
         logger.info("[Workflow] Starting parallel research node for %d jobs", len(jobs))
         batch = await _parallel_researcher.execute_jobs(jobs)
+        for job in batch.jobs:
+            try:
+                _repo.save_research_job(job.model_dump() if hasattr(job, "model_dump") else job)
+            except Exception:
+                pass
+        for fact in batch.facts:
+            try:
+                _repo.save_fact(fact.model_dump() if hasattr(fact, "model_dump") else fact)
+            except Exception:
+                pass
+        for source in batch.sources:
+            try:
+                _repo.save_source(source.model_dump() if hasattr(source, "model_dump") else source)
+            except Exception:
+                pass
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "researched",
+            "research_jobs": batch.jobs,
+            "facts": batch.facts,
+            "sources": batch.sources,
+        })
         return {
             "research_jobs": batch.jobs,
             "facts": batch.facts,
@@ -85,6 +117,22 @@ def create_research_graph(
         run_id = state.get("research_id", "run-default")
         logger.info("[Workflow] Starting checker node for %d facts, %d sources", len(facts), len(sources))
         batch = _checker.check_all(facts, sources, run_id)
+        for fact in batch.facts:
+            try:
+                _repo.save_fact(fact.model_dump() if hasattr(fact, "model_dump") else fact)
+            except Exception:
+                pass
+        for conflict in batch.conflicts:
+            try:
+                _repo.save_conflict(conflict.model_dump() if hasattr(conflict, "model_dump") else conflict)
+            except Exception:
+                pass
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "checked",
+            "facts": batch.facts,
+            "verification_results": batch.verification_results,
+            "conflicts": batch.conflicts,
+        })
         return {
             "facts": batch.facts,
             "verification_results": batch.verification_results,
@@ -100,6 +148,28 @@ def create_research_graph(
             candidates,
             state.get("retry_counts", {}),
         )
+        for job in batch.jobs:
+            try:
+                _repo.save_research_job(job.model_dump() if hasattr(job, "model_dump") else job)
+            except Exception:
+                pass
+        for fact in batch.facts:
+            try:
+                _repo.save_fact(fact.model_dump() if hasattr(fact, "model_dump") else fact)
+            except Exception:
+                pass
+        for source in batch.sources:
+            try:
+                _repo.save_source(source.model_dump() if hasattr(source, "model_dump") else source)
+            except Exception:
+                pass
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "retrying",
+            "research_jobs": batch.jobs,
+            "facts": batch.facts,
+            "sources": batch.sources,
+            "retry_counts": updated_retry_counts,
+        })
         return {
             "research_jobs": batch.jobs,
             "facts": batch.facts,
@@ -113,6 +183,10 @@ def create_research_graph(
         logger.info("[Workflow] Starting gap detection node for run %s", state["research_id"])
         detected_gaps = _gap_detector.detect_gaps(state)
         _gap_detector.persist_gaps(detected_gaps)
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "checked",
+            "gaps": detected_gaps,
+        })
         return {
             "gaps": detected_gaps,
             "workflow_status": "checked",
@@ -122,6 +196,10 @@ def create_research_graph(
         """Construct structured side-by-side comparison matrix from verified facts and gaps."""
         logger.info("[Workflow] Starting comparer node for run %s", state["research_id"])
         matrix = _comparer.compare(state)
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "compared",
+            "comparison": matrix,
+        })
         return {
             "comparison": matrix,
             "workflow_status": "compared",
@@ -131,6 +209,10 @@ def create_research_graph(
         """Generate final comprehensive synthesized research report."""
         logger.info("[Workflow] Starting writer node for run %s", state["research_id"])
         report = await _writer.generate_report(state)
+        _repo.save_state_snapshot(state["research_id"], {
+            "workflow_status": "completed",
+            "report": report,
+        })
         return {
             "report": report,
             "workflow_status": "completed",
@@ -204,15 +286,22 @@ async def run_research_pipeline(
     run_id = research_id or f"run-{uuid.uuid4().hex[:12]}"
     repo = repository or get_repository()
 
-    # Register research run
+    # Register research run if not already registered
     try:
-        repo.create_research_run(
-            run_id=run_id,
-            question=question,
-            status="running",
-        )
+        existing = repo.get_research_run(run_id)
+        if not existing:
+            repo.create_research_run(
+                run_id=run_id,
+                question=question,
+                status="running",
+            )
+        else:
+            repo.update_research_run(
+                run_id=run_id,
+                status="running",
+            )
     except Exception as exc:
-        logger.debug("Failed to create research run record: %s", str(exc))
+        logger.debug("Failed to record research run record: %s", str(exc))
 
     initial_state = create_initial_research_state(run_id, question)
 
@@ -228,7 +317,16 @@ async def run_research_pipeline(
     )
     logger.info("Executing research graph for question: '%s' (Run ID: %s)", question, run_id)
 
-    final_state: ResearchState = await graph.ainvoke(initial_state)
+    try:
+        final_state: ResearchState = await graph.ainvoke(initial_state)
+    except Exception as exc:
+        logger.error("Research graph execution failed for run %s: %s", run_id, str(exc), exc_info=True)
+        try:
+            repo.update_research_run(run_id=run_id, status="failed")
+            repo.save_state_snapshot(run_id, {"workflow_status": "failed", "error": str(exc)})
+        except Exception:
+            pass
+        raise
 
     # Persist final report and run status
     if final_state.get("report"):
@@ -248,6 +346,7 @@ async def run_research_pipeline(
             completed_at=datetime.now(timezone.utc).isoformat(),
             assumptions=final_state.get("assumptions"),
         )
+        repo.save_state_snapshot(run_id, final_state)
     except Exception as exc:
         logger.debug("Failed to update research run record: %s", str(exc))
 

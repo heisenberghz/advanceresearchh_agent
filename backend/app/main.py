@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import health
+from app.routers import health, research
 
 # Setup logging
 logging.basicConfig(
@@ -90,3 +90,4 @@ async def root():
 
 # Include Routers
 app.include_router(health.router)
+app.include_router(research.router, prefix="/research", tags=["Research"])

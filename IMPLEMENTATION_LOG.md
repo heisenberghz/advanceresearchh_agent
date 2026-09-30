@@ -701,7 +701,70 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **Important decisions or issues**:
   - Coordinated repository propagation through `create_research_graph` and `run_research_pipeline` to ensure offline mock stores and production Supabase clients persist all findings accurately.
 - **What should be done next**:
-  - Phase 7: REST API Endpoints (Task 21: `POST /research`, Task 22: `GET /research/{id}`, Task 23: `GET /report`).
+  - Phase 8: Frontend UI (Task 24: Research Input UI, Task 25: Research Progress Dashboard, Task 26: Findings UI).
+
+---
+
+## 2026-09-30 — Phase 7: REST API Endpoints (Tasks 21, 22, 23)
+
+- **What was done**:
+  - Implemented the complete FastAPI REST API router for research operations in `backend/app/routers/research.py`:
+    - **Task 21 (`POST /research`)**:
+      - Accepts natural-language research questions (`question`) with optional planner assumptions (`assumptions`).
+      - Validates non-empty, stripped question input (rejects empty/whitespace with HTTP 422).
+      - Generates unique run identifiers (`run-xxxxxxxxxxxx`).
+      - Persists initial research run record to `ResearchRepository`.
+      - Launches asynchronous background workflow task (`asyncio.create_task`) with global task reference tracking to prevent GC.
+      - Supports synchronous execution mode (`?sync=true`) for deterministic integration testing.
+      - Returns HTTP 201 Created immediately with `research_id`, `status: "running"`, and ISO-8601 timestamp.
+    - **Task 22 (`GET /research/{id}`)**:
+      - Inspects live or completed research run by ID.
+      - Returns 404 Not Found if run ID does not exist.
+      - Returns structured response with: `id`, `question`, overall `status`, `current_workflow_stage`, `workflow_status`, `research_jobs`, `findings` (facts), `conflicts`, `gaps`, `assumptions`, and `has_report`.
+      - Exposes granular progress advancing through workflow stages: `planned` → `researched` → `checked` → `retrying` → `compared` → `completed`.
+    - **Task 23 (`GET /research/{id}/report`)**:
+      - Retrieves the complete 8-section synthesized research deliverable.
+      - Returns 404 Not Found if report has not been generated or research is still pending.
+      - Delivers full structured JSON and rendered `markdown_content`.
+    - **Export Endpoint (`GET /research/{id}/export/markdown`)**:
+      - Serves the report as a downloadable `.md` file with `Content-Disposition: attachment`.
+    - **SSE Streaming Endpoint (`GET /research/{id}/stream`)**:
+      - Server-Sent Events stream yielding live progress milestones and event payloads as the workflow advances.
+    - **List Runs Endpoint (`GET /research`)**:
+      - Lists recent research runs for history and dashboard navigation.
+  - Enhanced `ResearchRepository` in `backend/app/db/repository.py`:
+    - Added `list_research_runs(limit)` for run history.
+    - Added `get_research_jobs(run_id)`, `get_facts(run_id)`, and `get_sources(run_id)`.
+    - Added in-memory state snapshot caching (`save_state_snapshot`, `get_state_snapshot`) allowing real-time inspection of active pipeline states.
+  - Enhanced `run_research_pipeline` and graph nodes in `backend/app/workflow/graph.py`:
+    - Safely checks for existing run records before creation to avoid duplicate key errors.
+    - Updates intermediate snapshots after every graph node (`planner`, `parallel_research`, `checker`, `retry`, `gaps`, `comparer`, `writer`).
+    - Wraps graph execution in error handling to reliably flag status as `"failed"` if an unhandled exception occurs.
+  - Mounted research router on `/research` in `backend/app/main.py`.
+  - Built comprehensive API test suite in `backend/tests/test_api_research.py`.
+- **Files created/modified**:
+  - Created: `backend/app/routers/research.py`
+  - Created: `backend/tests/test_api_research.py`
+  - Modified: `backend/app/db/repository.py`
+  - Modified: `backend/app/main.py`
+  - Modified: `backend/app/workflow/graph.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests/test_api_research.py -v`: 10/10 tests passed in 1.32s.
+  - Executed `pytest`: All 103/103 tests passed across the entire backend repository in 4.05s.
+  - Tested validation rejection on empty questions (HTTP 422).
+  - Tested background asynchronous start returning HTTP 201 Created and ID.
+  - Tested synchronous execution mode `POST /research?sync=true` completing end-to-end pipeline and generating report.
+  - Tested 404 responses on missing runs and pending reports.
+  - Tested SSE streaming event format (`text/event-stream`).
+  - Tested markdown file export (`Content-Type: text/markdown`).
+- **Result**: Success. Phase 7 (Tasks 21, 22, 23) complete and verified!
+- **Important decisions or issues**:
+  - Implemented both asynchronous non-blocking execution (for production UI responsiveness) and optional `?sync=true` mode (for deterministic automated test execution).
+  - State snapshot merging in `ResearchRepository` ensures the frontend can query rich progress (jobs, facts, conflicts, gaps) in real time while the pipeline is in flight.
+- **What should be done next**:
+  - Phase 8: Frontend UI (Task 24: Research Input UI, Task 25: Research Progress Dashboard, Task 26: Findings UI).
+
 
 
 

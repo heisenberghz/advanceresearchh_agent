@@ -25,6 +25,7 @@ class ResearchRepository:
         self._memory_conflicts: Dict[str, Dict[str, Any]] = {}
         self._memory_gaps: Dict[str, Dict[str, Any]] = {}
         self._memory_reports: Dict[str, Dict[str, Any]] = {}
+        self._memory_states: Dict[str, Dict[str, Any]] = {}
 
     # -------------------------------------------------------------------------
     # Research Runs
@@ -72,6 +73,26 @@ class ResearchRepository:
                 raise RuntimeError(f"Database error reading research run: {exc}") from exc
 
         return self._memory_runs.get(run_id)
+
+    def list_research_runs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve latest research runs."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("research_runs")
+                    .select("*")
+                    .order("created_at", desc=True)
+                    .limit(limit)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to list research runs: %s", str(exc))
+                raise RuntimeError(f"Database error listing research runs: {exc}") from exc
+
+        runs = list(self._memory_runs.values())
+        runs.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return runs[:limit]
 
     def update_research_run(
         self,
@@ -128,6 +149,26 @@ class ResearchRepository:
         self._memory_jobs[job_data["id"]] = job_data
         return job_data
 
+    def get_research_jobs(self, research_run_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all research jobs for a research run."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("research_jobs")
+                    .select("*")
+                    .eq("research_run_id", research_run_id)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to retrieve research jobs for %s: %s", research_run_id, str(exc))
+                raise RuntimeError(f"Database error reading research jobs: {exc}") from exc
+
+        return [
+            j for j in self._memory_jobs.values()
+            if j.get("research_run_id") == research_run_id
+        ]
+
     # -------------------------------------------------------------------------
     # Sources & Facts
     # -------------------------------------------------------------------------
@@ -146,6 +187,26 @@ class ResearchRepository:
         self._memory_sources[source_data["id"]] = source_data
         return source_data
 
+    def get_sources(self, research_run_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all sources for a research run."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("sources")
+                    .select("*")
+                    .eq("research_run_id", research_run_id)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to retrieve sources for %s: %s", research_run_id, str(exc))
+                raise RuntimeError(f"Database error reading sources: {exc}") from exc
+
+        return [
+            s for s in self._memory_sources.values()
+            if s.get("research_run_id") == research_run_id
+        ]
+
     def save_fact(self, fact_data: Dict[str, Any]) -> Dict[str, Any]:
         """Insert or update a verified fact record."""
         now = datetime.now(timezone.utc).isoformat()
@@ -162,6 +223,26 @@ class ResearchRepository:
 
         self._memory_facts[fact_data["id"]] = fact_data
         return fact_data
+
+    def get_facts(self, research_run_id: str) -> List[Dict[str, Any]]:
+        """Retrieve all facts for a research run."""
+        if self.db.is_connected:
+            try:
+                res = (
+                    self.db.raw_client.table("facts")
+                    .select("*")
+                    .eq("research_run_id", research_run_id)
+                    .execute()
+                )
+                return res.data or []
+            except Exception as exc:
+                logger.error("Failed to retrieve facts for %s: %s", research_run_id, str(exc))
+                raise RuntimeError(f"Database error reading facts: {exc}") from exc
+
+        return [
+            f for f in self._memory_facts.values()
+            if f.get("research_run_id") == research_run_id
+        ]
 
     # -------------------------------------------------------------------------
     # Conflicts & Gaps
@@ -275,6 +356,20 @@ class ResearchRepository:
             if report.get("research_run_id") == research_run_id:
                 return report
         return None
+
+    # -------------------------------------------------------------------------
+    # Pipeline State Snapshots
+    # -------------------------------------------------------------------------
+
+    def save_state_snapshot(self, run_id: str, updates: Dict[str, Any]) -> None:
+        """Update the in-memory state snapshot for a research run."""
+        if run_id not in self._memory_states:
+            self._memory_states[run_id] = {}
+        self._memory_states[run_id].update(updates)
+
+    def get_state_snapshot(self, run_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve the state snapshot for a research run if available."""
+        return self._memory_states.get(run_id)
 
 
 _REPOSITORY_INSTANCE: Optional[ResearchRepository] = None
