@@ -227,6 +227,40 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 9: Researcher (executing individual research jobs using Tavily search and structured fact extraction).
 
+---
+
+## 2026-09-30 17:56 IST — Task 9: Researcher
+
+- **Task**: TASK 9 — Researcher (Phase 4: Core Research Workflow)
+- **What was implemented**:
+  - Built the `Researcher` node in `backend/app/workflow/researcher.py` capable of independently executing single `ResearchJob` sub-tasks.
+  - Implemented targeted query generation using entity, attribute, and description fields.
+  - Connected Tavily search respecting `MAX_SEARCHES_PER_JOB` limits.
+  - Implemented LLM-based fact extraction (`FACT_EXTRACTION_PROMPT`) enforcing strict extraction of only evidence-backed statements citing exact `source_id` and verbatim `evidence_text`.
+  - Added a strict provenance guard: any fact citing a source ID not present in retrieved web sources is immediately discarded.
+  - Built `ResearcherResult` container returning updated `ResearchJob` (with attempts incremented and status updated to `completed` or `failed`), extracted `Fact` models, and cited `Source` models.
+  - Handled network errors and empty searches cleanly without crashing or raising unhandled exceptions.
+  - Updated `backend/app/workflow/__init__.py` with Researcher exports.
+  - Created automated test suite in `backend/tests/test_researcher.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/researcher.py`
+  - Created: `backend/tests/test_researcher.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 31/31 unit tests passed in 4.08s across the test suite.
+  - Verified full researcher execution with LLM extraction and provenance link preservation.
+  - Verified that hallucinated or non-existent source IDs are rejected by the provenance guard.
+  - Verified graceful handling of search network failures (`JobStatus.FAILED` without uncaught crashes).
+  - Verified clean handling of empty search results.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Kept Researcher completely stateless and decoupled from LangGraph graph topology so it can be cleanly called in parallel workers in Task 10.
+  - Initial trust tags set to `RED` / `UNSUPPORTED` pending verification by the Checker in Phase 5.
+- **What should be done next**:
+  - Task 10: Parallel Research Execution (running multiple Researcher jobs concurrently with isolated failure boundaries).
+
+
 
 
 
