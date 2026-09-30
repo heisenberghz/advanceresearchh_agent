@@ -493,6 +493,45 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 16: Research Retry Loop (implementing bounded conditional re-research for facts with weak evidence or high uncertainty).
 
+---
+
+## 2026-09-30 18:52 IST — Task 16: Research Retry Loop
+
+- **Task**: TASK 16 — Research Retry Loop (Phase 5: Verification System)
+- **What was implemented**:
+  - Built the `RetryCoordinator` in `backend/app/workflow/retry.py` governing bounded, selective re-research for jobs producing weak, ungrounded, or unverified facts.
+  - Implemented `identify_retry_candidates()`: scans verified facts, verification results, and research jobs to select only jobs with `UNSUPPORTED`/`RED` status or failing status whose retry count is strictly below `MAX_RESEARCH_RETRIES` (default 2).
+  - Implemented `prepare_retry_job()`: generates targeted query modifiers (e.g., adding explicit keywords such as `"official documentation"`, `"pricing"`, or exact entity phrasing) to improve secondary search precision without repeating identical failed queries.
+  - Implemented `execute_retries()`: dispatches candidate jobs to the parallel researcher runner, seamlessly incrementing job attempt counters and updating state `retry_counts`.
+  - Integrated the conditional retry cycle into the LangGraph state machine in `backend/app/workflow/graph.py`:
+    - Added `checker_node` and `retry_node`.
+    - Added conditional routing function `route_after_checker` directing flow to `retry_research` if candidates exist, or terminating to `END` if all facts are validated or retry limits are reached.
+  - Enforced loop safety: every retry run monotonically increments `retry_counts[job.id]`, making infinite loops impossible.
+  - Preserved historical provenance: failed retries never overwrite or discard previously verified facts or sources.
+  - Exported retry coordinator symbols in `backend/app/workflow/__init__.py`.
+  - Created automated test suite in `backend/tests/test_retry.py`.
+- **Files created/modified**:
+  - Created: `backend/app/workflow/retry.py`
+  - Created: `backend/tests/test_retry.py`
+  - Modified: `backend/app/workflow/graph.py`
+  - Modified: `backend/app/workflow/__init__.py`
+  - Modified: `backend/tests/test_graph.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 72/72 unit and integration tests passed across the entire suite (5 dedicated retry loop tests).
+  - Verified selective candidate identification (only jobs with red/unsupported facts or failure statuses are scheduled; verified jobs are left untouched).
+  - Verified hard retry limits: once `attempts >= MAX_RESEARCH_RETRIES`, no further retries are triggered.
+  - Verified targeted query modifiers are applied to retry attempts.
+  - Verified end-to-end LangGraph conditional execution cycle (`research -> checker -> retry_research -> checker -> END`).
+  - Verified graceful exit when facts remain unverified after maximum attempts, without crashes or infinite loops.
+- **Result**: Success.
+- **Important decisions or issues**:
+  - Maintained monotonic retry tracking in both `ResearchState["retry_counts"]` and `ResearchJob.attempts` to guarantee termination.
+  - Handled `None` values safely in `ResearchJob.entity`.
+- **What should be done next**:
+  - Task 17: Research Gaps (persisting unverified/missing information as explicit ResearchGap records).
+
+
 
 
 

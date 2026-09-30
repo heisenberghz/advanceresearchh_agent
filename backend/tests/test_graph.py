@@ -52,9 +52,11 @@ async def test_end_to_end_research_pipeline():
         )
 
         # 1. Workflow Status
-        assert final_state["workflow_status"] == "researched"
+        assert final_state["workflow_status"] in ("checked", "researched")
+        assert len(final_state["verification_results"]) >= 1
         assert final_state["research_id"] == "run-e2e-crm-test"
         assert final_state["question"] == question
+
 
         # 2. Planner Outputs
         assert len(final_state["assumptions"]) >= 1

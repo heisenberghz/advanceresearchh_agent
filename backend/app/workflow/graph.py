@@ -1,19 +1,20 @@
-"""LangGraph end-to-end research workflow connecting Planner and Parallel Researchers.
+"""LangGraph end-to-end research workflow connecting Planner, Parallel Researchers, Checker, and Retry Loop.
 
-Specification: PRD.md Section 5 & TECH_SPEC.md Section 4.3 & AGENT_TASKS.md Task 12.
+Specification: PRD.md Section 5, TECH_SPEC.md Sections 4.3 & 16, AGENT_TASKS.md Task 12 & 16.
 Workflow:
-START -> Planner -> Parallel Researchers -> END
-(Checker, Comparer, and Writer will be chained in subsequent phases).
+START -> Planner -> Parallel Research -> Checker -> [Conditional Retry Loop] -> END
 """
 
 import logging
-import uuid
 from typing import Optional
+import uuid
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.workflow.checker import Checker, get_checker
 from app.workflow.parallel import ParallelResearcher, get_parallel_researcher
 from app.workflow.planner import Planner, get_planner
+from app.workflow.retry import RetryCoordinator, get_retry_coordinator
 from app.workflow.state import ResearchState, create_initial_research_state
 
 logger = logging.getLogger("researchops.graph")
@@ -22,14 +23,21 @@ logger = logging.getLogger("researchops.graph")
 def create_research_graph(
     planner: Optional[Planner] = None,
     parallel_researcher: Optional[ParallelResearcher] = None,
+    checker: Optional[Checker] = None,
+    retry_coordinator: Optional[RetryCoordinator] = None,
 ) -> CompiledStateGraph:
-    """Construct and compile the initial LangGraph research pipeline.
+    """Construct and compile the LangGraph research pipeline with Checker and bounded Retry Loop.
 
     Connects:
-        START -> planner_node -> research_node -> END
+        START -> planner -> parallel_research -> checker
+        checker -> [should_retry?]
+            YES -> retry_research -> checker (loop)
+            NO  -> END
     """
     _planner = planner or get_planner()
     _parallel_researcher = parallel_researcher or get_parallel_researcher()
+    _checker = checker or get_checker()
+    _retry_coordinator = retry_coordinator or get_retry_coordinator(parallel_researcher=_parallel_researcher)
 
     async def planner_node(state: ResearchState) -> dict:
         """Execute strategic planning to generate structured research jobs."""
@@ -57,13 +65,62 @@ def create_research_graph(
             "workflow_status": "researched",
         }
 
+    async def checker_node(state: ResearchState) -> dict:
+        """Independently verify facts against sources, calculate trust, and detect conflicts."""
+        facts = state.get("facts", [])
+        sources = state.get("sources", [])
+        run_id = state.get("research_id", "run-default")
+        logger.info("[Workflow] Starting checker node for %d facts, %d sources", len(facts), len(sources))
+        batch = _checker.check_all(facts, sources, run_id)
+        return {
+            "facts": batch.facts,
+            "verification_results": batch.verification_results,
+            "conflicts": batch.conflicts,
+            "workflow_status": "checked",
+        }
+
+    async def retry_node(state: ResearchState) -> dict:
+        """Selectively re-research jobs with weak, ungrounded, or failing evidence."""
+        candidates = _retry_coordinator.identify_retry_candidates(state)
+        logger.info("[Workflow] Starting retry node for %d candidates", len(candidates))
+        batch, updated_retry_counts = await _retry_coordinator.execute_retries(
+            candidates,
+            state.get("retry_counts", {}),
+        )
+        return {
+            "research_jobs": batch.jobs,
+            "facts": batch.facts,
+            "sources": batch.sources,
+            "retry_counts": updated_retry_counts,
+            "workflow_status": "retrying",
+        }
+
+    def route_after_checker(state: ResearchState) -> str:
+        """Deterministic conditional router deciding between retry loop and completion."""
+        if _retry_coordinator.should_retry(state):
+            logger.info("[Workflow] Weak evidence detected; routing to retry_research")
+            return "retry_research"
+        logger.info("[Workflow] Evidence sufficient or retry limits reached; proceeding to END")
+        return END
+
     builder = StateGraph(ResearchState)
     builder.add_node("planner", planner_node)
     builder.add_node("parallel_research", research_node)
+    builder.add_node("checker", checker_node)
+    builder.add_node("retry_research", retry_node)
 
     builder.add_edge(START, "planner")
     builder.add_edge("planner", "parallel_research")
-    builder.add_edge("parallel_research", END)
+    builder.add_edge("parallel_research", "checker")
+    builder.add_conditional_edges(
+        "checker",
+        route_after_checker,
+        {
+            "retry_research": "retry_research",
+            END: END,
+        },
+    )
+    builder.add_edge("retry_research", "checker")
 
     return builder.compile()
 
@@ -73,6 +130,8 @@ async def run_research_pipeline(
     research_id: Optional[str] = None,
     planner: Optional[Planner] = None,
     parallel_researcher: Optional[ParallelResearcher] = None,
+    checker: Optional[Checker] = None,
+    retry_coordinator: Optional[RetryCoordinator] = None,
 ) -> ResearchState:
     """Execute the end-to-end research pipeline for a given business question.
 
@@ -81,23 +140,33 @@ async def run_research_pipeline(
         research_id: Optional unique run identifier (generated if omitted).
         planner: Optional custom Planner instance.
         parallel_researcher: Optional custom ParallelResearcher instance.
+        checker: Optional custom Checker instance.
+        retry_coordinator: Optional custom RetryCoordinator instance.
 
     Returns:
-        The final populated ResearchState containing jobs, facts, and sources.
+        The final populated ResearchState containing verified jobs, facts, and sources.
     """
     run_id = research_id or f"run-{uuid.uuid4().hex[:12]}"
     initial_state = create_initial_research_state(run_id, question)
 
-    graph = create_research_graph(planner=planner, parallel_researcher=parallel_researcher)
+    graph = create_research_graph(
+        planner=planner,
+        parallel_researcher=parallel_researcher,
+        checker=checker,
+        retry_coordinator=retry_coordinator,
+    )
     logger.info("Executing research graph for question: '%s' (Run ID: %s)", question, run_id)
 
     final_state: ResearchState = await graph.ainvoke(initial_state)
     logger.info(
-        "Research graph finished (Run ID: %s, Status: %s): %d jobs, %d facts, %d sources",
+        "Research graph finished (Run ID: %s, Status: %s): %d jobs, %d facts, %d sources, %d verification results, %d conflicts",
         run_id,
         final_state.get("workflow_status"),
         len(final_state.get("research_jobs", [])),
         len(final_state.get("facts", [])),
         len(final_state.get("sources", [])),
+        len(final_state.get("verification_results", [])),
+        len(final_state.get("conflicts", [])),
     )
     return final_state
+

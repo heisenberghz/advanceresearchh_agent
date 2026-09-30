@@ -21,6 +21,7 @@ from app.workflow.state import (
 )
 from app.workflow.checker import Checker, CheckerBatchResult, get_checker
 from app.workflow.conflicts import ConflictDetector, ConflictType, get_conflict_detector
+from app.workflow.retry import RetryCoordinator, get_retry_coordinator
 from app.workflow.trust import (
     TrustEvaluation,
     TrustRulesConfig,
@@ -46,6 +47,9 @@ __all__ = [
     "ConflictDetector",
     "ConflictType",
     "get_conflict_detector",
+    "RetryCoordinator",
+    "get_retry_coordinator",
+
 
     "TrustRulesConfig",
     "TrustScoreBreakdown",
