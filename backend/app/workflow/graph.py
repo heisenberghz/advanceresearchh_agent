@@ -5,12 +5,14 @@ Workflow:
 START -> Planner -> Parallel Research -> Checker -> [Conditional Retry Loop] -> END
 """
 
+from datetime import datetime, timezone
 import logging
 from typing import Optional
 import uuid
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from app.db.repository import ResearchRepository, get_repository
 from app.workflow.checker import Checker, get_checker
 from app.workflow.comparer import Comparer, get_comparer
 from app.workflow.gaps import GapDetector, get_gap_detector
@@ -31,6 +33,7 @@ def create_research_graph(
     gap_detector: Optional[GapDetector] = None,
     comparer: Optional[Comparer] = None,
     writer: Optional[Writer] = None,
+    repository: Optional[ResearchRepository] = None,
 ) -> CompiledStateGraph:
     """Construct and compile the LangGraph research pipeline with Checker, Retries, Gaps, Comparer, and Writer.
 
@@ -40,13 +43,14 @@ def create_research_graph(
             YES -> retry_research -> checker (loop)
             NO  -> detect_gaps -> comparer -> writer -> END
     """
+    _repo = repository or get_repository()
     _planner = planner or get_planner()
     _parallel_researcher = parallel_researcher or get_parallel_researcher()
     _checker = checker or get_checker()
     _retry_coordinator = retry_coordinator or get_retry_coordinator(parallel_researcher=_parallel_researcher)
-    _gap_detector = gap_detector or get_gap_detector()
+    _gap_detector = gap_detector or get_gap_detector(repository=_repo)
     _comparer = comparer or get_comparer()
-    _writer = writer or get_writer(comparer=_comparer)
+    _writer = writer or get_writer(comparer=_comparer, repository=_repo)
 
     async def planner_node(state: ResearchState) -> dict:
         """Execute strategic planning to generate structured research jobs."""
@@ -178,6 +182,7 @@ async def run_research_pipeline(
     gap_detector: Optional[GapDetector] = None,
     comparer: Optional[Comparer] = None,
     writer: Optional[Writer] = None,
+    repository: Optional[ResearchRepository] = None,
 ) -> ResearchState:
     """Execute the end-to-end research pipeline for a given business question.
 
@@ -191,11 +196,24 @@ async def run_research_pipeline(
         gap_detector: Optional custom GapDetector instance.
         comparer: Optional custom Comparer instance.
         writer: Optional custom Writer instance.
+        repository: Optional custom ResearchRepository instance.
 
     Returns:
         The final populated ResearchState containing verified jobs, facts, sources, gaps, comparison, and report.
     """
     run_id = research_id or f"run-{uuid.uuid4().hex[:12]}"
+    repo = repository or get_repository()
+
+    # Register research run
+    try:
+        repo.create_research_run(
+            run_id=run_id,
+            question=question,
+            status="running",
+        )
+    except Exception as exc:
+        logger.debug("Failed to create research run record: %s", str(exc))
+
     initial_state = create_initial_research_state(run_id, question)
 
     graph = create_research_graph(
@@ -206,10 +224,33 @@ async def run_research_pipeline(
         gap_detector=gap_detector,
         comparer=comparer,
         writer=writer,
+        repository=repo,
     )
     logger.info("Executing research graph for question: '%s' (Run ID: %s)", question, run_id)
 
     final_state: ResearchState = await graph.ainvoke(initial_state)
+
+    # Persist final report and run status
+    if final_state.get("report"):
+        try:
+            rep = final_state["report"]
+            rep_dict = rep.model_dump()
+            rep_dict["created_at"] = rep.created_at.isoformat()
+            rep_dict["updated_at"] = rep.updated_at.isoformat()
+            repo.save_report(rep_dict)
+        except Exception as exc:
+            logger.debug("Failed to save report to repo: %s", str(exc))
+
+    try:
+        repo.update_research_run(
+            run_id=run_id,
+            status=final_state.get("workflow_status", "completed"),
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            assumptions=final_state.get("assumptions"),
+        )
+    except Exception as exc:
+        logger.debug("Failed to update research run record: %s", str(exc))
+
     logger.info(
         "Research graph finished (Run ID: %s, Status: %s): %d jobs, %d facts, %d sources, %d verification results, %d conflicts, %d gaps, comparison: %s, report: %s",
         run_id,

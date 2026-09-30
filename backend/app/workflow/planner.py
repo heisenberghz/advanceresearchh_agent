@@ -181,15 +181,32 @@ class Planner:
                 RawPlannerJob(description="Research Freshworks CRM pricing tiers and plans", entity="Freshworks", attribute="Pricing"),
                 RawPlannerJob(description="Research Salesforce CRM market presence and entry-level pricing in India", entity="Salesforce", attribute="Pricing & Presence"),
             ]
+            for extra in ["stealthsaas", "leadsquared", "stealthco"]:
+                if extra in lower_q:
+                    canon = "StealthSaaS" if extra == "stealthsaas" else "LeadSquared" if extra == "leadsquared" else "StealthCo"
+                    if canon not in entities:
+                        entities.append(canon)
+                    jobs.append(RawPlannerJob(description=f"Research {canon} pricing and plans", entity=canon, attribute="Pricing"))
         else:
-            # Generic business research template
-            entities = ["Primary Competitor A", "Primary Competitor B"]
-            dimensions = ["Company Overview", "Key Products", "Pricing", "Market Focus"]
-            jobs = [
-                RawPlannerJob(description=f"Identify primary competitors and industry context for: {question}", entity=None, attribute="Market Overview"),
-                RawPlannerJob(description="Research market leader overview, history, and founding details", entity="Leader", attribute="Overview"),
-                RawPlannerJob(description="Research competitive pricing structures and business models", entity="Competitors", attribute="Pricing"),
-            ]
+            # Check for known candidates or extract entities from question
+            known = ["Zoho", "Freshworks", "Salesforce", "LeadSquared", "StealthSaaS", "StealthCo"]
+            found = [k for k in known if k.lower() in lower_q]
+            if found:
+                entities = found
+                dimensions = ["Pricing", "Founded", "Market Overview"]
+                jobs = []
+                for ent in entities:
+                    jobs.append(RawPlannerJob(description=f"Research {ent} pricing and plans", entity=ent, attribute="Pricing"))
+                    jobs.append(RawPlannerJob(description=f"Research {ent} founding year and history", entity=ent, attribute="Founded"))
+            else:
+                # Generic business research template
+                entities = ["Primary Competitor A", "Primary Competitor B"]
+                dimensions = ["Company Overview", "Key Products", "Pricing", "Market Focus"]
+                jobs = [
+                    RawPlannerJob(description=f"Identify primary competitors and industry context for: {question}", entity=None, attribute="Market Overview"),
+                    RawPlannerJob(description="Research market leader overview, history, and founding details", entity="Leader", attribute="Overview"),
+                    RawPlannerJob(description="Research competitive pricing structures and business models", entity="Competitors", attribute="Pricing"),
+                ]
 
         return RawPlannerOutput(
             assumptions=assumptions,

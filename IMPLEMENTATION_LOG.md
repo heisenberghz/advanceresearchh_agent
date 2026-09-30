@@ -666,6 +666,44 @@ Each entry records what changed, verification results, key decisions, and the ne
 - **What should be done next**:
   - Task 20: Full Research Workflow Integration (final end-to-end audit and validation of the entire LangGraph pipeline).
 
+---
+
+## 2026-09-30 19:25 IST — Task 20: Full Research Workflow Integration (MVP Milestone)
+
+- **Task**: TASK 20 — Complete LangGraph Workflow (Phase 6: Comparison and Reporting — Major MVP Milestone)
+- **What was implemented**:
+  - Successfully connected and unified all core research workflow components into the complete end-to-end backend state graph:
+    `START -> planner -> parallel_research -> checker -> [bounded retry loop] -> detect_gaps -> comparer -> writer -> END`.
+  - Upgraded `run_research_pipeline` in `backend/app/workflow/graph.py` with automatic repository persistence:
+    - Creates initial research run record (`status="running"`).
+    - Updates run on completion (`status="completed"`, `completed_at`, `assumptions`).
+    - Propagates custom `ResearchRepository` instance across all nodes (`GapDetector`, `Writer`, and runner).
+    - Persists the final generated `ResearchReport` directly into repository storage.
+  - Enhanced heuristic entity extraction in `backend/app/workflow/planner.py` to identify named target companies directly from natural-language queries when offline or unconfigured.
+  - Audited critical pipeline invariants:
+    - **100% Provenance Audit**: Every fact maps directly to verified source URLs and verbatim evidence excerpts.
+    - **Zero Hallucination Guarantee**: Unverified or unavailable information strictly becomes a `ResearchGap` (never fabricated).
+    - **Contradiction Preservation**: Conflicting disclosures flow cleanly into `Conflict` records and are noted in the comparison table and report.
+    - **Deterministic Trust Badging**: Every cell in the comparison matrix and every fact in the report retains its deterministic 🟢 GREEN, 🟡 YELLOW, or 🔴 RED badge.
+    - **8 Mandatory Report Sections**: Generates executive summary, assumptions, comparison matrix, key findings, detailed findings, conflicting information, research gaps, and numbered citations.
+  - Created comprehensive integration test suite in `backend/tests/test_pipeline_integration.py`.
+- **Files created/modified**:
+  - Created: `backend/tests/test_pipeline_integration.py`
+  - Modified: `backend/app/workflow/graph.py`
+  - Modified: `backend/app/workflow/planner.py`
+  - Modified: `IMPLEMENTATION_LOG.md`
+- **Tests/checks performed**:
+  - Executed `pytest tests -v`: 93/93 unit & integration tests passed across the entire backend test suite.
+  - Verified realistic multi-entity competitive scenario (Zoho, Freshworks, StealthSaaS) generating complete report deliverable.
+  - Verified 100% offline deterministic execution without live network or external LLM tokens.
+  - Verified complete provenance chain (`Fact -> Source -> Evidence -> Comparison Cell -> Report`).
+- **Result**: Success. First Major Backend MVP Milestone Achieved!
+- **Important decisions or issues**:
+  - Coordinated repository propagation through `create_research_graph` and `run_research_pipeline` to ensure offline mock stores and production Supabase clients persist all findings accurately.
+- **What should be done next**:
+  - Phase 7: REST API Endpoints (Task 21: `POST /research`, Task 22: `GET /research/{id}`, Task 23: `GET /report`).
+
+
 
 
 
