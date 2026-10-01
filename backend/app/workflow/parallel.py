@@ -35,7 +35,7 @@ class ParallelResearcher:
     def __init__(
         self,
         researcher: Optional[Researcher] = None,
-        max_concurrency: int = 4,
+        max_concurrency: int = 2,
     ):
         self.researcher = researcher or get_researcher()
         self.max_concurrency = max(1, max_concurrency)

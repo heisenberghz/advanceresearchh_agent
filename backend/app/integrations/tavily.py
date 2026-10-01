@@ -38,13 +38,13 @@ class TavilyClient:
         self,
         api_key: Optional[str] = None,
         max_results_default: int = 5,
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = 35.0,
         settings: Optional[Settings] = None,
     ):
         cfg = settings or get_settings()
         self.api_key = api_key or cfg.tavily_api_key
         self.max_results_default = min(max_results_default, cfg.max_searches_per_job * 3)
-        self.timeout = httpx.Timeout(timeout_seconds, connect=6.0)
+        self.timeout = httpx.Timeout(timeout_seconds, connect=10.0)
         self._client: Optional[httpx.AsyncClient] = None
 
     async def _get_client(self) -> httpx.AsyncClient:

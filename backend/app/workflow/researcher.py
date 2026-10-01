@@ -95,6 +95,7 @@ class Researcher:
         job.attempts += 1
         job.updated_at = datetime.now(timezone.utc)
         job.status = JobStatus.RUNNING
+        job.error = None
 
         logger.info("Executing ResearchJob %s (Attempt %d): %s", job.id, job.attempts, job.description)
 
@@ -106,6 +107,7 @@ class Researcher:
             if reusable:
                 cached_facts, cached_sources = reusable
                 job.status = JobStatus.COMPLETED
+                job.error = None
                 job.result_data = {
                     "reused_from_cache": True,
                     "sources_found": len(cached_sources),
@@ -150,6 +152,7 @@ class Researcher:
         if not sources:
             logger.info("No web sources returned for job %s query '%s'", job.id, query)
             job.status = JobStatus.COMPLETED
+            job.error = None
             job.result_data = {"sources_found": 0, "facts_extracted": 0}
             return ResearcherResult(job=job, facts=[], sources=[])
 
@@ -165,6 +168,7 @@ class Researcher:
             self.cache.set_reusable_results(job.entity, job.attribute, facts, relevant_sources)
 
         job.status = JobStatus.COMPLETED
+        job.error = None
         job.result_data = {
             "sources_found": len(sources),
             "sources_cited": len(relevant_sources),
