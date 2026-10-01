@@ -1,108 +1,140 @@
-# ResearchOps — The Autonomous Research Agent
+# 🌐 AI Market Research Agent
 
-**Project:** GATEWAYS 2026  
-**Team:** Reservoir Dogs  
-**Domain:** Enterprise & Business Operations  
-**Version:** 1.0  
+> **An evidence-based market research assistant that fact-checks every finding across live web sources — with zero guesswork.**
 
-ResearchOps is an autonomous AI research system that plans research from business queries, collects evidence via parallel search, independently verifies facts with deterministic trust tags, explicitly tracks conflicts and gaps, generates comparison matrices, and produces traceable reports.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-advanceresearchh--agent--uht8.vercel.app-brightgreen?style=for-the-badge&logo=vercel)](https://advanceresearchh-agent-uht8.vercel.app)
+[![Built For](https://img.shields.io/badge/Hackathon-Christ%20University-blue?style=for-the-badge)](https://advanceresearchh-agent-uht8.vercel.app)
+[![Tech Stack](https://img.shields.io/badge/Stack-Next.js%20%7C%20FastAPI%20%7C%20OpenRouter-orange?style=for-the-badge)](#tech-stack)
 
 ---
 
-## Core Product Principle
+## 🚀 Live Application
+👉 **Try it here:** [https://advanceresearchh-agent-uht8.vercel.app](https://advanceresearchh-agent-uht8.vercel.app)
 
-> **ResearchOps should not only provide answers. It should show the evidence behind those answers and make uncertainty visible.**
+---
 
-```text
-QUESTION
-   ↓
-PLANNER
-   ↓
-PARALLEL RESEARCH
-   ↓
-EVIDENCE
-   ↓
-CHECKER
-   ↓
-┌──────────────────────────┐
-│ Verified Facts           │
-│ Conflicting Facts        │
-│ Research Gaps            │
-└────────────┬─────────────┘
-             ↓
-         COMPARER
-             ↓
-          WRITER
-             ↓
-      TRACEABLE REPORT
+## 💡 The Problem
+
+When founders, consultants, and business analysts research new markets or competitors using standard AI tools:
+- **AI models make up facts** (hallucinating pricing, dates, and market sizes).
+- **Outdated data is presented as current**, leading to flawed business decisions.
+- **No proof is provided** — claims are made without clickable citations or verification.
+
+---
+
+## ✨ The Solution
+
+Our **AI Market Research Agent** conducts real-time web research like a diligent human analyst, but in minutes. It searches live sources, verifies numbers across multiple independent pages, flags conflicting reports, and compiles a comprehensive executive report with side-by-side competitor comparisons.
+
+```
+       [ Business Question ]
+                 │
+                 ▼
+       [ 1. Plan Research ]  ──────> Identifies key competitors & questions
+                 │
+                 ▼
+       [ 2. Live Web Search ] ─────> Searches multiple trustworthy sources in parallel
+                 │
+                 ▼
+       [ 3. Fact-Check & Verify ] ──> Cross-references data points across 2+ sources
+                 │
+                 ▼
+       [ 4. Compare & Synthesize ] ─> Creates side-by-side competitor table
+                 │
+                 ▼
+       [ 5. Verified Final Report ] ─> Ready to read, copy, or download as PDF
 ```
 
 ---
 
-## Project Structure
+## 🌟 Key Features
 
-```text
-researchops/
-├── backend/            # FastAPI backend & LangGraph research orchestration
-├── frontend/           # Next.js UI (TypeScript, Tailwind CSS, shadcn/ui)
-├── .gitignore          # Root ignore for secrets, node_modules, and virtualenvs
-├── prd.md              # Product Requirements Document
-├── tech_spec.md        # Technical Specification
-├── agent_tasks.md      # Step-by-step 44-task execution plan
-└── README.md           # Project documentation and developer guide
+### 1. 🔍 Multi-Source Verification
+Every extracted data point is color-coded by reliability:
+- 🟢 **Verified (2+ Sources)**: Independently confirmed across two or more trustworthy websites.
+- 🟡 **Single Source**: Found on one reputable page with direct quotation.
+- 🔴 **Disputed**: Sources report contradictory numbers.
+
+### 2. ⚖️ Discrepancy Detection (No Blind Guessing)
+When different publications report conflicting numbers (e.g. one source states ₹3,500/month while another states ₹4,200/month), the agent presents both figures side-by-side with original links rather than guessing or averaging.
+
+### 3. 🚫 No-Guesswork Policy
+If specific metrics (like private revenue or secret unit economics) aren't publicly verifiable, the agent explicitly flags them as **Information Not Found** instead of fabricating numbers.
+
+### 4. 📊 Side-by-Side Competitor Comparison
+Automatically organizes pricing, features, fleet sizes, and city availability into a clean, easy-to-read comparison table.
+
+### 5. 📑 One-Click PDF & Markdown Export
+Generate clean, board-ready executive summaries with direct clickable citations for your team or investors.
+
+---
+
+## 🖥️ User Experience
+
+- **Neo-Brutalist Visual Design**: Bold, modern, high-contrast interface designed for clarity and fast decision-making.
+- **Live Search Timeline**: Watch the agent plan, search, fact-check, and synthesize in real time.
+- **Interactive Inspection**: Click on any metric to view the exact sentence quoted from the source page.
+- **Past Research Drawer**: Revisit and compare previous research projects anytime with one click.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | **Next.js 16 (React, TypeScript)** | Fast, responsive interface deployed on **Vercel** |
+| **Styling** | **Neo-Brutalist CSS & Tailwind** | High-contrast, clean typography, judge-friendly UX |
+| **Backend** | **FastAPI (Python)** | High-performance async orchestration and endpoints |
+| **AI Intelligence** | **OpenRouter** | Advanced reasoning for query planning and report writing |
+| **Live Search** | **Tavily API** | Real-time web discovery and article extraction |
+| **Streaming** | **Server-Sent Events (SSE)** | Live step-by-step progress tracking for users |
+
+---
+
+## 🏃 Quick Start (Local Setup)
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/heisenberghz/advanceresearchh_agent.git
+cd advanceresearchh_agent
 ```
 
----
-
-## Technology Stack & Responsibilities
-
-| Component | Technology | Responsibility |
-|---|---|---|
-| **Frontend** | Next.js (TypeScript, Tailwind CSS, shadcn/ui) | User interaction, research trigger, live progress visualizer, report/source inspection, exports |
-| **Backend** | Python, FastAPI | REST endpoints, Server-Sent Events (SSE) streaming, database persistence, security layer |
-| **Orchestration** | LangGraph | State graph execution (`Planner` → `Researcher` → `Checker` → `Retry` → `Comparer` → `Writer`) |
-| **Web Search** | Tavily API | Source discovery and web evidence retrieval |
-| **LLM Gateway** | OpenRouter | Research/Checker model (cost-efficient) & Writer model (high-quality reasoning) |
-| **Database** | Supabase (PostgreSQL) | Persistence of runs, jobs, facts, sources, conflicts, gaps, and reports |
-
----
-
-## Environment Prerequisites
-
-- **Python**: `>= 3.11` (Python `3.14.3` detected)
-- **Node.js**: `>= 18.0.0` (Node `v24.15.0`, npm `12.0.2` detected)
-- **Git**
-
----
-
-## Development Setup
-
-### Backend (FastAPI)
+### 2. Run the Backend
 ```bash
 cd backend
 python -m venv .venv
-# On Windows PowerShell:
+
+# Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
-# On Linux/macOS:
+# macOS/Linux:
 # source .venv/bin/activate
 
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend (Next.js)
+### 3. Run the Frontend
 ```bash
 cd frontend
 npm install
-npm run dev -- -p 3000
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## Architecture Boundaries & Rules
+## 🎯 Sample Questions To Try
 
-1. **Security**: API keys (`OPENROUTER_API_KEY`, `TAVILY_API_KEY`, `SUPABASE_KEY`) must strictly reside on the backend and are never sent to the browser.
-2. **Provenance**: Every fact extracted must preserve its source URL, verbatim supporting evidence snippet, and retrieval timestamp.
-3. **No Fabrication**: Missing information must be recorded as an explicit `ResearchGap`.
-4. **No Silent Drops**: Conflicting information between sources must be preserved in a `Conflict` record.
-5. **Deterministic Trust**: Facts are tagged 🟢 GREEN, 🟡 YELLOW, or 🔴 RED based on explicit verification rules, not arbitrary model opinion.
+Click any sample scenario right on the home page or try these:
+
+- *"Electric scooter rental and subscription market in Bengaluru: competitors, pricing, battery swap models, and regulations."*
+- *"Quick commerce delivery services in Mumbai: Blinkit vs Zepto vs Instamart delivery fees, dark store economics, and market share."*
+- *"AI-powered customer service platforms: compare Zendesk, Freshdesk, and Intercom pricing tiers, features, and enterprise offerings."*
+
+---
+
+## 👥 Built With ❤️ For The Hackathon
+
+- **Product:** AI Market Research Agent
+- **Live URL:** [https://advanceresearchh-agent-uht8.vercel.app](https://advanceresearchh-agent-uht8.vercel.app)
