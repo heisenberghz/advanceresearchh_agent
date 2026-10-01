@@ -176,14 +176,30 @@ class Researcher:
 
     def _generate_search_query(self, job: ResearchJob) -> str:
         """Formulate a concise, high-signal web search query from the job definition."""
-        parts = []
+        base_parts = []
         if job.entity:
-            parts.append(job.entity)
+            base_parts.append(job.entity)
         if job.attribute:
-            parts.append(job.attribute)
-        if not parts:
-            parts.append(job.description)
-        return " ".join(parts).strip()
+            base_parts.append(job.attribute)
+
+        # Extract domain-specific anchor keywords from job description to disambiguate homonyms
+        # (e.g. Vogo returning French audio gear, or Bounce returning laundry sheets)
+        desc = (job.description or "").lower()
+        domain_anchors = []
+        for anchor in (
+            "bengaluru", "bangalore", "india", "electric", "scooter", "two-wheeler",
+            "ev", "rental", "subscription", "fleet", "crm", "software", "saas"
+        ):
+            if anchor in desc and anchor not in " ".join(base_parts).lower():
+                domain_anchors.append(anchor)
+
+        if domain_anchors:
+            return f"{' '.join(base_parts)} {' '.join(domain_anchors[:2])}".strip()
+
+        if base_parts:
+            return " ".join(base_parts).strip()
+
+        return (job.description or "").strip() or "market research overview"
 
     async def _extract_facts(self, job: ResearchJob, sources: List[Source]) -> List[Fact]:
         """Extract structured facts strictly citing retrieved sources."""

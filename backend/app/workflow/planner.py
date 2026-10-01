@@ -99,15 +99,19 @@ class ResearchPlan(BaseModel):
 PLANNER_SYSTEM_PROMPT = """You are the Lead Strategic Research Planner for "ResearchOps", an autonomous business intelligence system.
 Your mission is to analyze a natural-language business question and break it down into an actionable, structured research plan.
 
-Requirements:
-1. Understand the core objective and detect any missing context.
-2. Make reasonable, practical scoping assumptions (e.g. geographic market, latest public information, enterprise vs SMB tier).
-3. Identify the key entities (companies, competitors, products, vendors) to investigate. E.g. for "Compare Linear vs Jira", entities MUST be ["Linear", "Jira"].
-4. Identify 3-4 crucial comparison dimensions (e.g. "Pricing Tiers", "Speed / Performance", "Market Share").
-5. Generate discrete, non-redundant research jobs. Each job must have:
-   - "entity": name of the company/entity
-   - "attribute": dimension name
-   - "description": actionable web search instruction
+CRITICAL INSTRUCTIONS FOR ENTITIES:
+1. "entities" MUST strictly be actual commercial companies, vendors, competitors, or specific products (e.g. ["Bounce", "Yulu", "Vogo", "Zypp Electric"]).
+2. NEVER include research topics, analytical themes, or report sections in "entities" (e.g. NEVER include "Risk Analysis", "Industry Report", "Market Data", "Customer Research", "Operational Benchmark", "Regulatory Compliance").
+3. Limit "entities" to the top 3 to 5 real market players.
+4. Consolidate vehicle models or variants under the parent brand (e.g. use "Yulu", NOT "Yulu Miracle" or "Yulu Wynn" as separate entities; use "Blusmart", NOT "Blusmart (potential expansion)").
+
+CRITICAL INSTRUCTIONS FOR COMPARISON DIMENSIONS:
+1. "comparison_dimensions" must be 3-4 concrete, measurable attributes compared across all entities (e.g. ["Pricing Models", "Vehicle Fleet & Specs", "Bengaluru Availability", "Target Customers"]).
+
+CRITICAL INSTRUCTIONS FOR RESEARCH JOBS:
+1. Each job must represent a discrete, targeted web research instruction.
+2. In the "description", provide clear domain context and location (e.g. "Research Bounce electric scooter rental subscription pricing in Bengaluru").
+3. Ensure every entity and dimension is covered symmetrically so no entity is left without data for any dimension.
 
 Output format MUST strictly match this JSON structure:
 {
@@ -179,51 +183,114 @@ class Planner:
         raw: RawPlannerOutput,
     ) -> ResearchPlan:
         """Convert raw LLM output into fully validated ResearchPlan with ResearchJob domain models."""
+        # 1. Clean and filter entities
+        DISALLOWED_ENTITY_TERMS = {
+            "risk analysis", "industry report", "market data", "customer research",
+            "operational benchmark", "regulatory compliance", "market overview",
+            "general overview", "competitor comparison", "challenges", "opportunities",
+            "market size", "regulations", "adoption indicators", "use cases",
+            "charging infrastructure", "fleet management", "opportunities and risks",
+            "benchmarks", "analysis", "report", "insights"
+        }
+
+        cleaned_entities: List[str] = []
+        seen_entity_bases = set()
+        for ent in raw.entities:
+            if not ent or not isinstance(ent, str):
+                continue
+            e = ent.strip()
+            e_base = re.sub(r'\(.*?\)', '', e).strip()
+            if not e_base or len(e_base) < 2:
+                continue
+            if e_base.lower() in DISALLOWED_ENTITY_TERMS:
+                continue
+            if any(term in e_base.lower() for term in ("risk analysis", "industry report", "market data", "customer research", "operational benchmark", "regulatory compliance")):
+                continue
+
+            first_word = e_base.split()[0].lower()
+            if first_word in seen_entity_bases:
+                continue
+
+            cleaned_entities.append(e_base)
+            seen_entity_bases.add(first_word)
+            if len(cleaned_entities) >= 5:
+                break
+
+        if not cleaned_entities:
+            cleaned_entities = [e for e in raw.entities if e and isinstance(e, str)][:5] or ["Market Overview"]
+
+        # 2. Clean comparison dimensions
+        cleaned_dimensions: List[str] = []
+        seen_dim_lower = set()
+        for dim in raw.comparison_dimensions:
+            if not dim or not isinstance(dim, str):
+                continue
+            d = dim.strip()
+            d_lower = d.lower()
+            if not d or len(d) < 2 or d_lower in seen_dim_lower:
+                continue
+            seen_dim_lower.add(d_lower)
+            cleaned_dimensions.append(d)
+            if len(cleaned_dimensions) >= 5:
+                break
+
+        if not cleaned_dimensions:
+            cleaned_dimensions = ["Overview", "Key Features", "Pricing"]
+
+        # 3. Build entity mapping for job association
+        entity_name_map = {}
+        for orig in raw.entities:
+            c = re.sub(r'\(.*?\)', '', orig).strip()
+            f_word = c.split()[0].lower() if c else ""
+            for ce in cleaned_entities:
+                if ce.lower() == c.lower() or ce.split()[0].lower() == f_word:
+                    entity_name_map[orig] = ce
+                    break
+
         jobs: List[ResearchJob] = []
+        existing_pairs = set()
 
         for idx, r_job in enumerate(raw.jobs, start=1):
+            mapped_entity = entity_name_map.get(r_job.entity, r_job.entity)
+            if mapped_entity and mapped_entity.lower() in DISALLOWED_ENTITY_TERMS:
+                continue
             job_id = f"job-{research_run_id[:8]}-{idx:02d}"
+            job_ent = mapped_entity if mapped_entity in cleaned_entities else (cleaned_entities[0] if cleaned_entities else mapped_entity)
+            job_attr = r_job.attribute or (cleaned_dimensions[0] if cleaned_dimensions else "Overview")
+            pair = (job_ent.lower() if job_ent else "", job_attr.lower() if job_attr else "")
+            existing_pairs.add(pair)
             jobs.append(
                 ResearchJob(
                     id=job_id,
                     research_run_id=research_run_id,
                     description=r_job.description,
-                    entity=r_job.entity,
-                    attribute=r_job.attribute,
+                    entity=job_ent,
+                    attribute=job_attr,
                     status=JobStatus.PENDING,
                     attempts=0,
                 )
             )
 
-        # If no explicit jobs were provided by LLM, generate complete symmetric coverage
-        # for all (entity, dimension) pairs so research is thoroughly balanced.
-        if not jobs and raw.entities and raw.comparison_dimensions and len(raw.entities) >= 2:
-            existing_pairs = {
-                ((j.entity or "").strip().lower(), (j.attribute or "").strip().lower())
-                for j in jobs
-            }
-            for ent in raw.entities:
-                e_clean = (ent or "").strip()
-                if not e_clean:
-                    continue
-                for dim in raw.comparison_dimensions:
-                    d_clean = (dim or "").strip()
-                    if not d_clean:
-                        continue
-                    if (e_clean.lower(), d_clean.lower()) not in existing_pairs:
+        # 4. Guarantee symmetric coverage: if an entity has 0 jobs, or pairs are missing, fill them
+        researched_entities = {(j.entity or "").strip().lower() for j in jobs if j.entity}
+        for ent in cleaned_entities:
+            if ent.lower() not in researched_entities:
+                for dim in cleaned_dimensions:
+                    pair = (ent.lower(), dim.lower())
+                    if pair not in existing_pairs:
                         job_id = f"job-{research_run_id[:8]}-{len(jobs) + 1:02d}"
                         jobs.append(
                             ResearchJob(
                                 id=job_id,
                                 research_run_id=research_run_id,
-                                description=f"Investigate {e_clean} {d_clean} specifications, official documentation, and disclosures",
-                                entity=e_clean,
-                                attribute=d_clean,
+                                description=f"Investigate {ent} {dim} details and market specifications",
+                                entity=ent,
+                                attribute=dim,
                                 status=JobStatus.PENDING,
                                 attempts=0,
                             )
                         )
-                        existing_pairs.add((e_clean.lower(), d_clean.lower()))
+                        existing_pairs.add(pair)
 
         # Guard: ensure at least one general job exists if none provided
         if not jobs:
@@ -239,8 +306,8 @@ class Planner:
         return ResearchPlan(
             question=question,
             assumptions=raw.assumptions or ["Rely on latest publicly available disclosures"],
-            entities=raw.entities or ["Market Overview"],
-            comparison_dimensions=raw.comparison_dimensions or ["Overview", "Key Features", "Pricing"],
+            entities=cleaned_entities,
+            comparison_dimensions=cleaned_dimensions,
             research_jobs=jobs,
         )
 

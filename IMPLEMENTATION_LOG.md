@@ -1065,3 +1065,27 @@ Each entry records what changed, verification results, key decisions, and the ne
     - `test_openrouter.py` + `test_tavily.py` + `test_writer.py` + `test_api_research.py`: 26/26 PASSED.
 
 - **Result**: Complete success. Eliminates matrix fragmentation and delivers professional, deep multi-source research synthesis.
+
+---
+
+## [Task 38] Entity Disambiguation, Topic Filtering & Domain-Anchored Web Search
+
+- **Objective**:
+  - Prevent analytical topics (e.g. "Risk Analysis", "Market Data", "Customer Research", "Operational Benchmark") from polluting competitor comparison table columns.
+  - Consolidate sub-models and parenthetical aliases (e.g. "Yulu Miracle" -> "Yulu", "Blusmart (potential expansion)" -> "Blusmart") into primary company entities.
+  - Enforce full symmetric job coverage so that all valid competitors are thoroughly researched across all dimensions.
+  - Disambiguate homonyms in search queries (e.g. preventing "Vogo" from fetching French sports-audio equipment or "Bounce" from fetching dryer sheets/trampoline parks) by injecting geographic and domain context anchors.
+
+- **Changes**:
+  - [planner.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/planner.py):
+    - Upgraded `PLANNER_SYSTEM_PROMPT` with strict rules restricting `entities` to actual commercial companies/vendors, forbidding analytical themes or report sections, and capping at 5 top competitors.
+    - Added programmatic entity sanitization in `_build_research_plan`: filters out disallowed analytical phrases (`risk analysis`, `industry report`, `market data`, etc.), cleans parentheticals, and deduplicates sub-brands.
+    - Enforced symmetric job coverage: detects any entity missing from research jobs and automatically synthesizes targeted jobs across all comparison dimensions.
+  - [researcher.py](file:///d:/christ%20hachathon%20pro/backend/app/workflow/researcher.py):
+    - Upgraded `_generate_search_query` to extract domain anchors (`bengaluru`, `electric`, `scooter`, `rental`, `subscription`, `ev`, `fleet`, `crm`) from job descriptions, generating high-signal search queries (e.g. `"Vogo Pricing Models bengaluru electric"`).
+
+- **Verification**:
+  - Full pytest suite: **108 passed out of 108 tests (100% pass rate)**.
+  - Clean execution with zero regressions.
+
+- **Result**: Complete success. Competitor tables now feature genuine competitors with context-rich, accurate web evidence.
