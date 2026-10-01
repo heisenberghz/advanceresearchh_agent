@@ -319,6 +319,45 @@ class Planner:
             "Latest current market data prioritized",
         ]
 
+        # 1. Multi-entity comparison extraction: e.g. "Compare Blinkit, Zepto, and Swiggy Instamart on delivery fees..."
+        comp_match = re.search(r"^(?:compare\s+)(.+?)(?:\s+(?:on|across|for|in|based on)\s+(.+))?$", question.strip(), re.IGNORECASE)
+        if comp_match:
+            ent_part = comp_match.group(1).strip()
+            dim_part = comp_match.group(2).strip() if comp_match.group(2) else ""
+
+            # Extract comma/and-separated entities
+            raw_ents = [re.sub(r"^(?:and|vs\.?|versus)\s+", "", e.strip(), flags=re.IGNORECASE).strip()
+                        for e in re.split(r",|\band\b|\bvs\.?\b|\bversus\b", ent_part) if e.strip()]
+            extracted_ents = [e for e in raw_ents if len(e) >= 2][:4]
+
+            # Extract dimensions
+            if dim_part:
+                raw_dims = [re.sub(r"^(?:and\s+)", "", d.strip(), flags=re.IGNORECASE).strip().title()
+                            for d in re.split(r",|\band\b", dim_part) if d.strip()]
+                extracted_dims = [d for d in raw_dims if len(d) >= 2][:4]
+            else:
+                extracted_dims = ["Pricing", "Key Features", "Market Presence"]
+
+            if len(extracted_ents) >= 2:
+                entities = extracted_ents
+                dimensions = extracted_dims or ["Pricing", "Market Presence"]
+                jobs = []
+                for ent in entities:
+                    for dim in dimensions:
+                        jobs.append(
+                            RawPlannerJob(
+                                description=f"Research {ent} {dim} pricing metrics and live data",
+                                entity=ent,
+                                attribute=dim,
+                            )
+                        )
+                return RawPlannerOutput(
+                    assumptions=assumptions,
+                    entities=entities,
+                    comparison_dimensions=dimensions,
+                    jobs=jobs,
+                )
+
         if "crm" in lower_q:
             entities = ["Zoho", "Freshworks", "Salesforce"]
             dimensions = ["Founded Year", "Headquarters", "Pricing Model", "Market Presence"]
@@ -339,53 +378,53 @@ class Planner:
         else:
             known = [
                 "Zoho", "Freshworks", "Salesforce", "LeadSquared", "StealthSaaS", "StealthCo",
-                "Bounce", "Yulu", "Vogo", "Linear", "Jira", "Stripe", "Adyen", "Datadog", "New Relic"
+                "Bounce", "Yulu", "Vogo", "Linear", "Jira", "Stripe", "Adyen", "Datadog", "New Relic",
+                "Blinkit", "Zepto", "Swiggy Instamart", "Swiggy", "Zomato", "Uber", "Ola"
             ]
             found = [k for k in known if k.lower() in lower_q]
             if found:
                 entities = found
-                dimensions = ["Pricing", "Founded", "Market Overview"]
+                dimensions = ["Pricing & Fees", "Operations & Availability", "Market Presence"]
                 jobs = []
                 for ent in entities:
-                    jobs.append(RawPlannerJob(description=f"Research {ent} pricing and plans", entity=ent, attribute="Pricing"))
-                    jobs.append(RawPlannerJob(description=f"Research {ent} founding year and history", entity=ent, attribute="Founded"))
+                    for dim in dimensions:
+                        jobs.append(RawPlannerJob(description=f"Research {ent} {dim} details official data", entity=ent, attribute=dim))
             else:
-                # Try dynamic comparison extraction: "Compare Linear vs Jira on pricing tiers, speed, and market share"
+                # Dynamic comparison extraction: "Compare X vs Y on..."
                 vs_match = re.search(r"(?:compare\s+)?([A-Za-z0-9\s\-]+?)\s+(?:vs\.?|versus|and)\s+([A-Za-z0-9\s\-]+?)(?:\s+(?:on|across|for|in)\s+|$)", question, re.IGNORECASE)
                 if vs_match:
                     ent1 = vs_match.group(1).strip().title()
                     ent2 = vs_match.group(2).strip().title()
-                    # Clean prefix words like "The", "Compare" if still present
                     ent1 = re.sub(r"^(?:compare|the)\s+", "", ent1, flags=re.IGNORECASE).strip()
                     entities = [ent1, ent2]
                     
-                    # Check for dimensions
                     on_match = re.search(r"(?:on|across|for|in)\s+(.+)$", question, re.IGNORECASE)
                     if on_match:
                         dim_str = on_match.group(1).strip()
                         dims = [re.sub(r"^(?:and\s+)", "", d.strip()).strip().title() for d in re.split(r",|\band\b", dim_str) if d.strip()]
-                        dimensions = dims[:4] if dims else ["Pricing Tiers", "Speed / Performance", "Market Share"]
+                        dimensions = dims[:4] if dims else ["Pricing", "Performance", "Market Presence"]
                     else:
-                        dimensions = ["Pricing Tiers", "Core Features", "Market Share"]
+                        dimensions = ["Pricing", "Core Features", "Market Presence"]
 
                     jobs = []
                     for ent in entities:
                         for dim in dimensions:
                             jobs.append(
                                 RawPlannerJob(
-                                    description=f"Research {ent} {dim} official pricing plans benchmark speed market share",
+                                    description=f"Research {ent} {dim} official data and benchmark metrics",
                                     entity=ent,
                                     attribute=dim,
                                 )
                             )
                 else:
-                    # Generic business research template
-                    entities = ["Primary Competitor A", "Primary Competitor B"]
-                    dimensions = ["Company Overview", "Key Products", "Pricing", "Market Focus"]
+                    # Clean extraction from question title
+                    words = [w.strip() for w in question.split() if w.strip()]
+                    topic_title = " ".join(words[:4]).title()
+                    entities = [f"{topic_title} Service A", f"{topic_title} Service B"]
+                    dimensions = ["Pricing & Plans", "Key Offerings", "Market Coverage"]
                     jobs = [
-                        RawPlannerJob(description=f"Identify primary competitors and industry context for: {question}", entity=None, attribute="Market Overview"),
-                        RawPlannerJob(description="Research market leader overview, history, and founding details", entity="Leader", attribute="Overview"),
-                        RawPlannerJob(description="Research competitive pricing structures and business models", entity="Competitors", attribute="Pricing"),
+                        RawPlannerJob(description=f"Research market pricing and fees for {question}", entity=entities[0], attribute="Pricing & Plans"),
+                        RawPlannerJob(description=f"Research operational details and coverage for {question}", entity=entities[1], attribute="Market Coverage"),
                     ]
 
         return RawPlannerOutput(

@@ -77,6 +77,16 @@ class Comparer:
                 canonical_entities.append(e_clean)
                 entity_name_map[e_clean.lower()] = e_clean
 
+        GENERIC_ENTITY_NAMES = {
+            "market", "leader", "competitors", "competitor", "primary competitor a",
+            "primary competitor b", "unknown", "industry", "general", "overview"
+        }
+
+        # Filter out generic placeholder entities if specific entities exist
+        has_specific = any(e.lower() not in GENERIC_ENTITY_NAMES for e in canonical_entities)
+        if has_specific:
+            canonical_entities = [e for e in canonical_entities if e.lower() not in GENERIC_ENTITY_NAMES]
+
         # 2. Resolve & Canonicalize Metrics / Dimensions
         canonical_metrics: List[str] = []
         metric_name_map: Dict[str, str] = {}  # lowercase -> canonical casing

@@ -177,18 +177,17 @@ class Researcher:
     def _generate_search_query(self, job: ResearchJob) -> str:
         """Formulate a concise, high-signal web search query from the job definition."""
         base_parts = []
-        if job.entity:
+        if job.entity and job.entity.lower() not in ("leader", "competitors", "competitor", "primary competitor a", "primary competitor b", "unknown", "market"):
             base_parts.append(job.entity)
         if job.attribute:
             base_parts.append(job.attribute)
 
         # Extract domain-specific anchor keywords from job description to disambiguate homonyms
-        # (e.g. Vogo returning French audio gear, or Bounce returning laundry sheets)
         desc = (job.description or "").lower()
         domain_anchors = []
         for anchor in (
-            "bengaluru", "bangalore", "india", "electric", "scooter", "two-wheeler",
-            "ev", "rental", "subscription", "fleet", "crm", "software", "saas"
+            "bengaluru", "bangalore", "mumbai", "delhi", "india", "quick commerce", "delivery", "dark store",
+            "electric", "scooter", "two-wheeler", "ev", "rental", "subscription", "fleet", "crm", "software", "saas"
         ):
             if anchor in desc and anchor not in " ".join(base_parts).lower():
                 domain_anchors.append(anchor)

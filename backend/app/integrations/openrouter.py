@@ -122,9 +122,8 @@ class OpenRouterClient:
             "model": chosen_model,
             "messages": messages,
             "temperature": temperature,
+            "max_tokens": max_tokens or 3500,
         }
-        if max_tokens:
-            payload["max_tokens"] = max_tokens
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 

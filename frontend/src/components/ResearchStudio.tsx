@@ -164,20 +164,25 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                           }
                         );
                         return (
-                          <td key={entity} className="p-3 text-black border-r-2 border-black last:border-r-0 bg-white">
+                          <td key={entity} className="p-3.5 text-black border-r-2 border-black last:border-r-0 bg-white align-top">
                             {cell ? (
-                              <div className="flex items-start gap-1.5">
-                                <span
-                                  className={`neo-stamp ${
-                                    cell.trust_tag === "GREEN"
-                                      ? "neo-stamp-green"
-                                      : cell.trust_tag === "YELLOW"
-                                      ? "neo-stamp-yellow"
-                                      : "neo-stamp-red"
-                                  }`}
-                                >
+                              <div className="space-y-2">
+                                <div>
+                                  <span
+                                    className={`neo-stamp ${
+                                      cell.trust_tag === "GREEN"
+                                        ? "neo-stamp-green"
+                                        : cell.trust_tag === "YELLOW"
+                                        ? "neo-stamp-yellow"
+                                        : "neo-stamp-red"
+                                    }`}
+                                  >
+                                    {cell.trust_tag === "GREEN" ? "Verified" : cell.trust_tag === "YELLOW" ? "Single Source" : "Disputed"}
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm font-semibold text-black leading-relaxed break-words">
                                   {cell.value}
-                                </span>
+                                </p>
                               </div>
                             ) : (
                               <span className="text-slate-400 font-mono text-xs">Not available</span>
@@ -266,18 +271,19 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                     </span>
                   </div>
 
-                  <p className="text-base font-black text-black mb-2.5">{fact.value}</p>
+                  <p className="text-sm sm:text-base font-bold text-black mb-2.5 leading-snug break-words">{fact.value}</p>
 
                   {fact.evidence && fact.evidence.length > 0 && (
-                    <div className="neo-quote line-clamp-2">
+                    <div className="neo-quote">
+                      <span className="font-mono text-[10px] uppercase font-bold text-slate-500 block mb-1">Source Excerpt:</span>
                       "{fact.evidence[0].text}"
                     </div>
                   )}
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t-2 border-black flex items-center justify-between font-mono text-xs font-bold text-slate-700">
-                  <span className="truncate max-w-[200px] text-[11px]">{fact.verification_reason || "Source verified"}</span>
-                  <span className="text-black group-hover:underline">
+                <div className="mt-3 pt-2.5 border-t-2 border-black flex items-center justify-between gap-2 font-mono text-xs font-bold text-slate-700">
+                  <span className="text-[11px] text-slate-600 line-clamp-1">{fact.verification_reason || "Source verified"}</span>
+                  <span className="text-black group-hover:underline whitespace-nowrap shrink-0">
                     View Source Details
                   </span>
                 </div>
