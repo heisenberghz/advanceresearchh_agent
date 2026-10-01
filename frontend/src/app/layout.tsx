@@ -19,9 +19,9 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "ResearchOps — Autonomous Research & Verification Agent",
+  title: "AI Market Research Agent — Verified Business Intelligence",
   description:
-    "Autonomous multi-agent research with deterministic verification, conflict preservation, and zero hallucination guarantee.",
+    "Evidence-based business and market research with multi-source fact checking, competitor comparisons, and direct web citations.",
 };
 
 export default function RootLayout({

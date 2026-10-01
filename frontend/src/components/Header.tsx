@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
               ResearchOps
             </span>
             <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-black text-white hidden sm:inline">
-              AGENT v1.0
+              AI RESEARCHER
             </span>
           </div>
         </div>
@@ -64,18 +64,18 @@ export const Header: React.FC<HeaderProps> = ({
               health.configuration?.is_research_ready ? (
                 <span className="neo-stamp neo-stamp-green">
                   <span className="w-2 h-2 rounded-full bg-black inline-block animate-pulse" />
-                  Live Web Grounding
+                  Live Web Search Active
                 </span>
               ) : (
                 <span className="neo-stamp neo-stamp-yellow">
                   <span className="w-2 h-2 rounded-full bg-black inline-block" />
-                  Deterministic Mock
+                  Offline Demo Mode
                 </span>
               )
             ) : isChecking ? (
               <span className="neo-stamp neo-stamp-white">
                 <span className="w-2 h-2 rounded-full bg-slate-400 inline-block animate-ping" />
-                Checking API
+                Connecting...
               </span>
             ) : (
               <span className="neo-stamp neo-stamp-red">
@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>History</span>
+            <span>Past Research</span>
           </button>
 
           {/* New Research Button */}
@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="neo-btn-primary text-xs sm:text-xs py-1.5 px-3.5"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>New run</span>
+            <span>New Research</span>
           </button>
         </div>
       </div>

@@ -88,9 +88,9 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                   </p>
 
                   <div className="flex items-center justify-between font-mono text-xs font-bold text-slate-600 pt-1 border-t border-slate-200">
-                    <span className="text-[11px]">RUN: {r.id.slice(0, 10)}</span>
+                    <span className="text-[11px]">ID: {r.id.slice(0, 10)}</span>
                     <span className="text-black font-black underline">
-                      Open Dossier
+                      View Report
                     </span>
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
             })
           ) : (
             <div className="text-center py-16 font-mono text-xs font-bold text-slate-500 border-2 border-dashed border-black rounded-lg p-6 bg-white">
-              No previous research runs recorded yet.
+              No previous research saved yet.
             </div>
           )}
         </div>

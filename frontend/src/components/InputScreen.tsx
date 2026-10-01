@@ -139,7 +139,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
         <div className="inline-flex items-center gap-2 mb-3">
           <span className="neo-stamp neo-stamp-yellow">
             <Flame className="w-3.5 h-3.5 fill-black stroke-black inline-block mr-1" />
-            Deterministic Research Agent
+            Evidence-Based Market Research
           </span>
         </div>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-black tracking-tight uppercase leading-[1.1]">
@@ -147,7 +147,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
           Verify Pricing. Resolve Claims.
         </h1>
         <p className="mt-3 text-sm sm:text-base font-medium text-slate-800 max-w-2xl mx-auto leading-relaxed">
-          Primary-source intelligence with verified citations and zero hallucinations. Every metric is cross-examined against public filings and live documentation.
+          Accurate competitive intelligence backed by verified web citations. Every metric is checked against official sources and live documentation.
         </p>
       </div>
 
@@ -157,7 +157,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
           {/* Scope Selectors */}
           <div className="flex flex-wrap items-center gap-2 pb-3 border-b-2 border-black">
             <span className="font-mono text-xs font-black uppercase tracking-wider text-black mr-1">
-              FOCUS SCOPE:
+              RESEARCH FOCUS:
             </span>
             {RESEARCH_SCOPES.map((scope) => {
               const Icon = scope.icon;
@@ -209,7 +209,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
             >
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 stroke-[2.5]" />
-                <span>Custom Research Directives (Optional)</span>
+                <span>Custom Filters & Guidelines (Optional)</span>
               </div>
               {showAssumptions ? (
                 <ChevronUp className="w-4 h-4 stroke-[3]" />
@@ -220,7 +220,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
             {showAssumptions && (
               <div className="p-4 bg-white border-t-2 border-black">
                 <label className="block font-mono text-[11px] font-bold text-black uppercase mb-1.5">
-                  Directives (one constraint per line):
+                  Specific requirements (one per line):
                 </label>
                 <textarea
                   rows={2}
@@ -238,7 +238,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="neo-stamp neo-stamp-green">
                 <span className="w-1.5 h-1.5 rounded-full bg-black" />
-                Dual Verified
+                Verified (2+ Sources)
               </span>
               <span className="neo-stamp neo-stamp-yellow">
                 <span className="w-1.5 h-1.5 rounded-full bg-black" />
@@ -246,7 +246,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
               </span>
               <span className="neo-stamp neo-stamp-red">
                 <span className="w-1.5 h-1.5 rounded-full bg-black" />
-                Contradiction
+                Conflicting Info
               </span>
             </div>
 
@@ -258,11 +258,11 @@ export const InputScreen: React.FC<InputScreenProps> = ({
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  <span>Synthesizing plan...</span>
+                  <span>Researching market...</span>
                 </>
               ) : (
                 <>
-                  <span>Run research</span>
+                  <span>Start Research</span>
                   <span className="neo-kbd ml-1.5">⌘↵</span>
                 </>
               )}
@@ -275,10 +275,10 @@ export const InputScreen: React.FC<InputScreenProps> = ({
       <div className="mb-10">
         <div className="flex items-center justify-between mb-3 px-1">
           <span className="font-mono text-xs font-black uppercase tracking-wider text-black">
-            Benchmark Scenarios
+            Sample Research Queries
           </span>
           <span className="font-mono text-xs font-bold text-slate-600">
-            Click card to load
+            Click to test query
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -326,7 +326,7 @@ export const InputScreen: React.FC<InputScreenProps> = ({
       <div className="neo-box p-6 mb-10 bg-white">
         <div className="font-mono text-xs font-black text-black uppercase tracking-wider mb-5 flex items-center gap-2">
           <span className="w-2.5 h-2.5 bg-black" />
-          <span>Verification Protocol Standards</span>
+          <span>How The Agent Works</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y-2 md:divide-y-0 md:divide-x-2 divide-black">
           <div className="pt-4 md:pt-0 md:pr-5">
@@ -334,10 +334,10 @@ export const InputScreen: React.FC<InputScreenProps> = ({
               <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
             </div>
             <h3 className="text-sm font-black text-black uppercase tracking-tight">
-              Strict Corroboration
+              Multi-Source Verification
             </h3>
             <p className="text-xs font-medium text-slate-700 mt-1.5 leading-relaxed">
-              Claims without independent secondary verification are tagged as single-source or quarantined as research gaps.
+              Facts are cross-referenced across multiple authoritative websites before being confirmed.
             </p>
           </div>
 
@@ -346,10 +346,10 @@ export const InputScreen: React.FC<InputScreenProps> = ({
               <Scale className="w-5 h-5 stroke-[2.5]" />
             </div>
             <h3 className="text-sm font-black text-black uppercase tracking-tight">
-              Preserved Contradictions
+              Discrepancy Detection
             </h3>
             <p className="text-xs font-medium text-slate-700 mt-1.5 leading-relaxed">
-              Contradictory disclosures between vendors are preserved side-by-side with verbatim quotes rather than smoothed over.
+              When competitors or sources dispute a figure, both perspectives are clearly presented side-by-side.
             </p>
           </div>
 
@@ -358,10 +358,10 @@ export const InputScreen: React.FC<InputScreenProps> = ({
               <FileText className="w-5 h-5 stroke-[2.5]" />
             </div>
             <h3 className="text-sm font-black text-black uppercase tracking-tight">
-              Direct Citation Graph
+              Transparent Citations
             </h3>
             <p className="text-xs font-medium text-slate-700 mt-1.5 leading-relaxed">
-              Every metric maps directly to its source domain, document snapshot, and exact passage used to corroborate it.
+              Every data point links directly to its live web source and exact excerpt.
             </p>
           </div>
         </div>
@@ -372,10 +372,10 @@ export const InputScreen: React.FC<InputScreenProps> = ({
         <div className="neo-box p-6 bg-white">
           <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-3">
             <span className="font-mono text-xs font-black text-black uppercase tracking-wider">
-              Research Ledger ({recentRuns.length})
+              Recent Research Projects ({recentRuns.length})
             </span>
             <span className="font-mono text-xs font-bold text-slate-600">
-              Click run to inspect
+              Click to view project
             </span>
           </div>
           <div className="divide-y-2 divide-slate-100">

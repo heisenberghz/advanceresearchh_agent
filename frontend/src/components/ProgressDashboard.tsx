@@ -26,12 +26,12 @@ interface ProgressDashboardProps {
 }
 
 const PIPELINE_STAGES = [
-  { key: "planned", label: "Query Planning", icon: Brain },
-  { key: "researched", label: "Web Extraction", icon: Globe },
-  { key: "checked", label: "Corroboration", icon: CheckCircle },
-  { key: "retrying", label: "Gap Resolution", icon: Repeat },
-  { key: "compared", label: "Matrix Synthesis", icon: TableProperties },
-  { key: "completed", label: "Audit Report", icon: PenTool },
+  { key: "planned", label: "Planning Research", icon: Brain },
+  { key: "researched", label: "Searching Web", icon: Globe },
+  { key: "checked", label: "Fact Checking", icon: CheckCircle },
+  { key: "retrying", label: "Deepening Search", icon: Repeat },
+  { key: "compared", label: "Comparing Data", icon: TableProperties },
+  { key: "completed", label: "Final Report", icon: PenTool },
 ];
 
 export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
@@ -77,10 +77,10 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                     : "neo-stamp-yellow animate-pulse"
                 }`}
               >
-                {statusData.status === "running" ? "Active Pipeline" : isFinished ? "Synthesized" : "Halted"}
+                {statusData.status === "running" ? "Research in Progress" : isFinished ? "Completed" : "Stopped"}
               </span>
               <span className="neo-stamp neo-stamp-white font-mono">
-                RUN: {statusData.research_id}
+                ID: {statusData.research_id}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-black tracking-tight leading-snug">
@@ -95,13 +95,13 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
                 onClick={onViewFindings}
                 className="neo-btn-secondary text-xs sm:text-xs py-2 px-3.5"
               >
-                Inspect Findings
+                View Findings
               </button>
               <button
                 onClick={onViewReport}
                 className="neo-btn-primary text-xs sm:text-xs py-2 px-4"
               >
-                View Audit Report
+                View Report
               </button>
             </div>
           )}
@@ -112,10 +112,10 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       <div className="neo-box p-5 sm:p-6 mb-6 bg-white">
         <div className="flex items-center justify-between mb-4">
           <span className="font-mono text-xs font-black text-black uppercase tracking-wider">
-            Verification Pipeline
+            Research Progress
           </span>
           <span className="neo-stamp neo-stamp-black">
-            {isFinished ? "100% COMPLETE" : `STAGE: ${currentStage.toUpperCase()}`}
+            {isFinished ? "100% COMPLETE" : `STEP: ${currentStage.toUpperCase()}`}
           </span>
         </div>
 
@@ -174,7 +174,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div className="neo-box p-4 bg-white">
           <div className="flex items-center justify-between text-xs font-mono font-bold text-black mb-1">
-            <span>VERIFIED CLAIMS</span>
+            <span>VERIFIED FACTS</span>
             <span className="flex items-center gap-1 font-mono text-[11px]">
               <span className="w-2 h-2 rounded-full bg-[#4ADE80] border border-black" />
               <span>{greenFacts}</span>
@@ -185,11 +185,11 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
           <div className="text-3xl font-black font-mono text-black">
             {statusData.findings?.length || 0}
           </div>
-          <p className="font-mono text-[11px] font-semibold text-slate-600 mt-1">Cross-examined</p>
+          <p className="font-mono text-[11px] font-semibold text-slate-600 mt-1">Confirmed facts</p>
         </div>
 
         <div className="neo-box p-4 bg-white">
-          <div className="text-xs font-mono font-bold text-black mb-1">WEB INQUIRIES</div>
+          <div className="text-xs font-mono font-bold text-black mb-1">SEARCHES RUN</div>
           <div className="text-3xl font-black font-mono text-black">
             {statusData.research_jobs?.length || 0}
           </div>
@@ -201,23 +201,23 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
         <div className="neo-box p-4 bg-[#FEF9C3]">
           <div className="text-xs font-mono font-bold text-black mb-1 flex items-center gap-1">
             <Scale className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>CONTRADICTIONS</span>
+            <span>DISCREPANCIES</span>
           </div>
           <div className="text-3xl font-black font-mono text-black">
             {statusData.conflicts?.length || 0}
           </div>
-          <p className="font-mono text-[11px] font-semibold text-slate-800 mt-1">Preserved claims</p>
+          <p className="font-mono text-[11px] font-semibold text-slate-800 mt-1">Disputed claims</p>
         </div>
 
         <div className="neo-box p-4 bg-[#FEE2E2]">
           <div className="text-xs font-mono font-bold text-black mb-1 flex items-center gap-1">
             <FileQuestion className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>RESEARCH GAPS</span>
+            <span>MISSING DATA</span>
           </div>
           <div className="text-3xl font-black font-mono text-black">
             {statusData.gaps?.length || 0}
           </div>
-          <p className="font-mono text-[11px] font-semibold text-slate-800 mt-1">Unverified metrics</p>
+          <p className="font-mono text-[11px] font-semibold text-slate-800 mt-1">Not found publicly</p>
         </div>
       </div>
 
@@ -225,7 +225,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       <div className="neo-box p-6 mb-6 bg-white">
         <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-3">
           <span className="font-mono text-xs font-black text-black uppercase tracking-wider">
-            Targeted Sub-queries ({statusData.research_jobs?.length || 0})
+            Research Tasks ({statusData.research_jobs?.length || 0})
           </span>
         </div>
 

@@ -53,13 +53,13 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="neo-stamp neo-stamp-yellow mb-1.5">
-            Analysis & Ground Truth
+            Fact-Checked Insights
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-black tracking-tight uppercase">
-            Research Findings Studio
+            Research Findings & Comparison
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-700 mt-1">
-            Cross-examined claims, side-by-side matrices, preserved contradictions, and verified primary citations.
+            Side-by-side competitor comparison, multi-source verified findings, identified discrepancies, and original web citations.
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
           onClick={onViewReport}
           className="neo-btn-primary text-xs sm:text-xs py-2 px-4 self-start sm:self-auto"
         >
-          <span>View Audit Report</span>
+          <span>View Final Report</span>
         </button>
       </div>
 
@@ -82,7 +82,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
           }`}
         >
           <TableProperties className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Comparison Matrix</span>
+          <span>Comparison Table</span>
         </button>
 
         <button
@@ -94,7 +94,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
           }`}
         >
           <Search className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Corroborated Facts ({facts.length})</span>
+          <span>Verified Findings ({facts.length})</span>
         </button>
 
         <button
@@ -106,7 +106,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
           }`}
         >
           <Scale className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Contradictions ({conflicts.length})</span>
+          <span>Conflicting Claims ({conflicts.length})</span>
         </button>
 
         <button
@@ -118,7 +118,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
           }`}
         >
           <FileQuestion className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Research Gaps ({gaps.length})</span>
+          <span>Missing Information ({gaps.length})</span>
         </button>
       </div>
 
@@ -127,10 +127,10 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
         <div className="neo-box overflow-hidden p-6 bg-white">
           <div className="mb-4">
             <h2 className="font-mono text-xs font-black text-black uppercase tracking-wider">
-              Cross-Entity Dimension Matrix
+              Side-by-Side Competitor Comparison
             </h2>
             <p className="text-xs font-medium text-slate-700 mt-0.5">
-              Extracted metrics per entity with source veracity indicators and dual-check tags.
+              Key metrics and pricing compared across competitors with source trustworthiness ratings.
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                 <thead>
                   <tr className="bg-[#FEF9C3] border-b-2 border-black">
                     <th className="p-3 text-left font-mono font-black text-black border-r-2 border-black w-1/4 uppercase">
-                      DIMENSION
+                      FEATURE / METRIC
                     </th>
                     {comparison.entities.map((entity) => (
                       <th key={entity} className="p-3 text-left font-mono font-black text-black border-r-2 border-black last:border-r-0 uppercase">
@@ -180,7 +180,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-slate-400 font-mono text-xs">Not evaluated</span>
+                              <span className="text-slate-400 font-mono text-xs">Not available</span>
                             )}
                           </td>
                         );
@@ -192,7 +192,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
             </div>
           ) : (
             <div className="p-10 text-center text-slate-500 font-mono text-xs border-2 border-dashed border-black rounded-lg">
-              Comparison matrix is formulated once multiple entities are researched.
+              Comparison table will appear once multiple competitors or topics are researched.
             </div>
           )}
         </div>
@@ -207,9 +207,9 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
               <span className="font-mono text-xs font-black uppercase text-black">FILTER:</span>
               {[
                 { tag: "ALL", label: "All" },
-                { tag: "GREEN", label: "Dual verified" },
-                { tag: "YELLOW", label: "Single source" },
-                { tag: "RED", label: "Disputed" },
+                { tag: "GREEN", label: "Verified (2+ Sources)" },
+                { tag: "YELLOW", label: "Single Source" },
+                { tag: "RED", label: "Conflicting / Disputed" },
               ].map(({ tag, label }) => (
                 <button
                   key={tag}
@@ -230,7 +230,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by metric or entity..."
+                placeholder="Search facts, company, or metric..."
                 className="w-full pl-8 pr-3 py-1.5 font-mono text-xs text-black bg-[#FAF9F5] border-2 border-black rounded-md focus:bg-white focus:outline-none focus:shadow-[2px_2px_0px_#000000]"
               />
               <Search className="w-3.5 h-3.5 text-black absolute left-2.5 top-2.5" />
@@ -262,7 +262,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                           : "neo-stamp-red"
                       }`}
                     >
-                      {fact.trust_tag === "GREEN" ? "Dual verified" : fact.trust_tag === "YELLOW" ? "Single source" : "Disputed"}
+                      {fact.trust_tag === "GREEN" ? "Verified (2+ Sources)" : fact.trust_tag === "YELLOW" ? "Single Source" : "Disputed"}
                     </span>
                   </div>
 
@@ -278,7 +278,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                 <div className="mt-3 pt-2.5 border-t-2 border-black flex items-center justify-between font-mono text-xs font-bold text-slate-700">
                   <span className="truncate max-w-[200px] text-[11px]">{fact.verification_reason || "Source verified"}</span>
                   <span className="text-black group-hover:underline">
-                    View Citation
+                    View Source Details
                   </span>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
       {activeTab === "conflicts" && (
         <div className="space-y-4">
           <div className="neo-box p-4 bg-[#FEF9C3] font-mono text-xs text-black leading-relaxed">
-            <strong className="font-black uppercase tracking-wider">Contradiction Preservation:</strong> When authoritative sources report conflicting metrics, ResearchOps holds both figures side-by-side with full citation context rather than guessing or averaging.
+            <strong className="font-black uppercase tracking-wider">Conflicting Claims Detected:</strong> When reputable web sources report conflicting numbers, the system displays both figures side-by-side with direct source links instead of guessing or averaging.
           </div>
 
           {conflicts && conflicts.length > 0 ? (
@@ -306,7 +306,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                       </h3>
                     </div>
                     <span className="neo-stamp neo-stamp-yellow">
-                      Discrepancy Preserved
+                      Conflicting Figures
                     </span>
                   </div>
 
@@ -321,7 +321,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                       >
                         <div>
                           <div className="font-mono text-[10px] font-black uppercase text-slate-600 mb-1">
-                            Disclosed Claim {idx + 1}
+                            Reported Figure {idx + 1}
                           </div>
                           <div className="text-base font-black text-black mb-2">{claim.value}</div>
                           {claim.evidence && (
@@ -337,7 +337,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                             rel="noopener noreferrer"
                             className="mt-3 font-mono text-xs font-bold text-black underline flex items-center gap-1"
                           >
-                            <span>Open source page</span>
+                            <span>Open original source</span>
                             <ExternalLink className="w-3.5 h-3.5 stroke-[2.5]" />
                           </a>
                         )}
@@ -355,7 +355,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
             </div>
           ) : (
             <div className="neo-box p-10 text-center font-mono text-xs font-bold text-slate-500 bg-white">
-              Zero conflicting metrics detected among primary sources.
+              No conflicting figures detected across sources.
             </div>
           )}
         </div>
@@ -365,7 +365,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
       {activeTab === "gaps" && (
         <div className="space-y-4">
           <div className="neo-box p-4 bg-[#FEE2E2] font-mono text-xs text-black leading-relaxed">
-            <strong className="font-black uppercase tracking-wider">Zero Hallucination Protocol:</strong> When requested metrics cannot be verified through credible primary sources, ResearchOps logs an explicit research gap rather than synthesizing ungrounded estimates.
+            <strong className="font-black uppercase tracking-wider">No-Guesswork Policy:</strong> When requested metrics cannot be confirmed through trustworthy public sources, the agent explicitly flags them as missing information rather than making up unverified numbers.
           </div>
 
           {gaps && gaps.length > 0 ? (
@@ -374,22 +374,22 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                 <div key={gap.id} className="neo-box p-4 bg-white">
                   <div className="flex items-center justify-between mb-2">
                     <span className="neo-stamp neo-stamp-red">
-                      Unverified Metric
+                      Information Not Found
                     </span>
                     <span className="font-mono text-[11px] font-bold text-slate-600">
-                      {gap.attempts || 1} search cycles
+                      {gap.attempts || 1} search passes
                     </span>
                   </div>
                   <h3 className="font-mono text-xs font-black text-black mb-1">{gap.requested_information}</h3>
                   <div className="neo-quote mt-2 bg-[#FEE2E2] text-black">
-                    <strong className="font-black">GAP REASON:</strong> {gap.reason}
+                    <strong className="font-black">WHY IT'S MISSING:</strong> {gap.reason}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="neo-box p-10 text-center font-mono text-xs font-bold text-slate-500 bg-white">
-              All targeted metrics were corroborated. Zero research gaps remaining.
+              All targeted metrics were verified. No information gaps remaining.
             </div>
           )}
         </div>
@@ -426,14 +426,14 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                       : "neo-stamp-red"
                   }`}
                 >
-                  {selectedFact.trust_tag === "GREEN" ? "Dual verified" : selectedFact.trust_tag === "YELLOW" ? "Single source" : "Disputed"}
+                  {selectedFact.trust_tag === "GREEN" ? "Verified (2+ Sources)" : selectedFact.trust_tag === "YELLOW" ? "Single Source" : "Disputed"}
                 </span>
               </div>
             </div>
 
             {selectedFact.verification_reason && (
               <div className="mb-4 bg-[#FEF9C3] p-3 rounded-lg border-2 border-black font-mono text-xs text-black">
-                <span className="font-black">VERIFICATION REASON: </span>
+                <span className="font-black">VERIFICATION DETAILS: </span>
                 {selectedFact.verification_reason}
               </div>
             )}
@@ -442,7 +442,7 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
               <div className="mb-4">
                 <div className="font-mono text-xs font-black text-black mb-1.5 uppercase flex items-center gap-1.5">
                   <FileText className="w-4 h-4 stroke-[2.5]" />
-                  <span>Verbatim source excerpt</span>
+                  <span>Exact source quote</span>
                 </div>
                 {selectedFact.evidence.map((ev, idx) => (
                   <div

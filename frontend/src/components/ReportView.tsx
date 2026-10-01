@@ -51,7 +51,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           className="neo-btn-secondary text-xs sm:text-xs py-1.5 px-3 self-start"
         >
           <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Back to Findings Studio</span>
+          <span>Back to Findings</span>
         </button>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -75,7 +75,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   : "text-black hover:bg-slate-100"
               }`}
             >
-              Raw MD
+              Raw Text
             </button>
           </div>
 
@@ -127,10 +127,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <div className="mb-8 pb-6 border-b-2 border-black">
           <div className="flex items-center gap-2 mb-3">
             <span className="neo-stamp neo-stamp-green">
-              Ground-Truth Verified
+              Multi-Source Verified
             </span>
             <span className="neo-stamp neo-stamp-white font-mono">
-              RUN: {report.research_run_id}
+              ID: {report.research_run_id}
             </span>
           </div>
 
@@ -151,7 +151,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-              <span>Deterministic Cross-Verification</span>
+              <span>Multi-Source Verified</span>
             </div>
           </div>
         </div>
@@ -171,12 +171,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
       {/* Bottom Footer Actions */}
       <div className="flex items-center justify-between text-xs font-mono font-bold text-black pb-8">
-        <span>RESEARCH OPS // AUTONOMOUS AGENT</span>
+        <span>AI RESEARCH AGENT // EVIDENCE ENGINE</span>
         <button
           onClick={onNewResearch}
           className="neo-btn-primary text-xs sm:text-xs py-1.5 px-3"
         >
-          Initialize New Research Run
+          Start New Research
         </button>
       </div>
     </div>
