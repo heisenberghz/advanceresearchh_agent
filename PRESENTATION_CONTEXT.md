@@ -2,7 +2,7 @@
 > **Project:** ResearchOps — Autonomous Evidence-Based Market Research Agent  
 > **Team:** Reservoir Dogs  
 > **Event:** Christ University Hackathon / GATEWAYS 2026  
-> **Live Demo URL:** [https://advanceresearchh-agent-uht8.vercel.app](https://advanceresearchh-agent-uht8.vercel.app)
+> **Live Demo URL:** [https://advanceresearchh-agent.vercel.app](https://advanceresearchh-agent.vercel.app)
 
 ---
 
@@ -282,7 +282,7 @@ agree?      conflict?
 ## 7. Live Demonstration Playbook (For Screen Sharing)
 * **Demo Duration:** 60 to 90 seconds.
 * **Step-by-step Flow:**
-  1. **Show the Clean UI:** Highlight the live URL (`advanceresearchh-agent-uht8.vercel.app`) and the 1-click preset button.
+  1. **Show the Clean UI:** Highlight the live URL (`advanceresearchh-agent.vercel.app`) and the 1-click preset button.
   2. **Launch a Query:** E.g., *"Compare Bounce, Yulu, and Vogo in Bengaluru EV Scooter market on rental pricing, fleet size, and charging model."*
   3. **Show Real-Time Progress:** Point out the live timeline showing the agent planning questions, querying live sources, and verifying facts.
   4. **Highlight the Comparison Table:**
