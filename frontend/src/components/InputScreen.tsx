@@ -37,6 +37,14 @@ interface BenchmarkPreset {
 
 const BENCHMARK_PRESETS: BenchmarkPreset[] = [
   {
+    entityA: "Bounce",
+    entityB: "Yulu",
+    question: "Electric scooter subscription and rental market in Bengaluru: compare Bounce, Yulu, and Vogo on monthly rental pricing, battery swap networks, and regulations.",
+    category: "⭐ Flagship Demo",
+    metrics: ["Monthly rental", "Battery swap", "RTO / traffic rules"],
+    tintClass: "hover:bg-[#FEF08A]",
+  },
+  {
     entityA: "Linear",
     entityB: "Jira",
     question: "Compare Linear and Jira on pricing tiers, issue speed, and enterprise security compliance.",

@@ -337,8 +337,10 @@ class Planner:
                         entities.append(canon)
                     jobs.append(RawPlannerJob(description=f"Research {canon} pricing and plans", entity=canon, attribute="Pricing"))
         else:
-            # Check for known candidates or extract entities from question
-            known = ["Zoho", "Freshworks", "Salesforce", "LeadSquared", "StealthSaaS", "StealthCo"]
+            known = [
+                "Zoho", "Freshworks", "Salesforce", "LeadSquared", "StealthSaaS", "StealthCo",
+                "Bounce", "Yulu", "Vogo", "Linear", "Jira", "Stripe", "Adyen", "Datadog", "New Relic"
+            ]
             found = [k for k in known if k.lower() in lower_q]
             if found:
                 entities = found
