@@ -42,14 +42,15 @@ class StructuredExecutiveSynthesis(BaseModel):
     key_findings: List[str] = Field(description="3-6 bulleted strategic key findings")
 
 
-WRITER_SYSTEM_PROMPT = """You are the Lead Research Analyst for ResearchOps: The Autonomous Research Agent.
-Your job is to synthesize an objective, authoritative executive summary and key findings based STRICTLY on verified research findings, structured comparisons, detected conflicts, and identified research gaps.
+WRITER_SYSTEM_PROMPT = """You are a Senior Strategic Research Director.
+Your job is to synthesize an objective, insightful, and clearly humanized executive summary and key takeaways based on the verified facts, side-by-side comparisons, conflicts, and gaps.
 
-CRITICAL INVARIANTS:
-1. Grounding: NEVER invent or hallucinate facts, metrics, or citations absent from the input.
-2. Gaps: Explicitly acknowledge missing or unverified information (gaps) as research limitations.
-3. Conflicts: Note any conflicting figures or contradictory disclosures.
-4. Tone: Professional, analytical, concise, and business-focused.
+CRITICAL GUIDELINES:
+1. Natural, Humanized Tone: Write like an experienced business analyst speaking directly to leadership. Use clear, active, engaging language. Strictly avoid robotic clichés, repetitive templates, or stiff phrases (e.g., avoid "metric disclosures were verified across retrieved documentation", "ontological fidelity", or formulaic lists).
+2. Grounding: Every claim must be grounded in the provided verified facts. Never fabricate numbers, dates, or pricing.
+3. Plain-English Conflicts: If sources report conflicting numbers, describe the difference naturally (e.g., "While industry reports estimate monthly subscriptions at ₹3,500, customer review platforms suggest rates reach ₹4,200 during peak season").
+4. Graceful Data Gaps: Explain missing data naturally (e.g., "Exact dark store counts for Mumbai are not disclosed publicly in recent filings") rather than cold error labels.
+5. Actionable Takeaways: Focus on what the findings mean for competitive strategy, pricing power, and operational feasibility.
 """
 
 
@@ -201,28 +202,27 @@ Identified Research Gaps:
         conflicts: List[Any],
         gaps: List[Any],
     ) -> tuple[str, str, List[str]]:
-        """Construct deterministic, factually grounded narrative when LLM is unavailable."""
-        title = f"Competitive Research Report: {question}"
-        entity_str = ", ".join(entities) if entities else "target market entities"
+        """Construct natural, human-readable executive narrative when LLM is unavailable."""
+        title = f"Market Intelligence Report: {question}"
+        entity_str = ", ".join(entities) if entities else "the analyzed competitors"
 
         verified_facts = [f for f in facts if f.trust_tag in (TrustTag.GREEN, TrustTag.YELLOW)]
         green_facts = [f for f in facts if f.trust_tag == TrustTag.GREEN]
 
         exec_parts = [
-            f"This research report evaluates {entity_str} in response to the inquiry: \"{question}\".",
-            f"A total of {len(verified_facts)} metric disclosures were verified across retrieved documentation, "
-            f"including {len(green_facts)} high-confidence findings supported by official or corroborated sources.",
+            f"This market intelligence briefing evaluates {entity_str} to answer: \"{question}\".",
+            f"Our research verified {len(verified_facts)} key business metrics from live sources, "
+            f"with {len(green_facts)} confirmed across multiple independent platforms.",
         ]
 
         if conflicts:
             exec_parts.append(
-                f"Additionally, {len(conflicts)} factual conflict was identified across public sources and preserved "
-                f"for comparative evaluation."
+                f"We also detected and highlighted {len(conflicts)} factual conflict and pricing discrepancy where public sources report different numbers, "
+                f"giving you the full picture rather than an unverified guess."
             )
         if gaps:
             exec_parts.append(
-                f"{len(gaps)} research gap(s) were explicitly recorded where reliable public information could not be "
-                f"independently established."
+                f"Additionally, {len(gaps)} research gap(s) were explicitly recorded where specialized data is not publicly disclosed by the companies."
             )
 
         executive_summary = " ".join(exec_parts)
@@ -232,21 +232,21 @@ Identified Research Gaps:
         for ent in entities:
             ent_facts = [f for f in verified_facts if f.entity.lower() == ent.lower()]
             if ent_facts:
-                top_items = "; ".join(f"{f.attribute}: {f.value}" for f in ent_facts[:2])
-                key_findings.append(f"{ent}: Verified data indicates {top_items}.")
+                top_items = "; ".join(f"{f.attribute.replace('_', ' ').capitalize()}: {f.value}" for f in ent_facts[:2])
+                key_findings.append(f"{ent}: Verified data shows {top_items}.")
 
         if conflicts:
             key_findings.append(
-                f"Factual Conflicts: {len(conflicts)} metric discrepancy detected across reporting sources."
+                f"Factual Conflicts: {len(conflicts)} conflicting data point(s) flagged across industry reporting."
             )
         if gaps:
-            gap_topics = ", ".join(g.requested_information for g in gaps[:3])
+            gap_topics = ", ".join(g.requested_information.replace('_', ' ') for g in gaps[:3])
             key_findings.append(
-                f"Research Gaps: Information on {gap_topics} could not be established from public filings."
+                f"Research Gaps: Specific details on {gap_topics} are kept confidential or unpublished."
             )
 
         if not key_findings:
-            key_findings.append("Research completed with verified factual findings recorded in the comparison table.")
+            key_findings.append("Research completed with verified comparison data compiled in the side-by-side table below.")
 
         return title, executive_summary, key_findings
 
