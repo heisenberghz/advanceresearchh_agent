@@ -1,5 +1,6 @@
 """Tavily web search API integration with metadata normalization and error handling."""
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -37,13 +38,33 @@ class TavilyClient:
         self,
         api_key: Optional[str] = None,
         max_results_default: int = 5,
-        timeout_seconds: float = 30.0,
+        timeout_seconds: float = 15.0,
         settings: Optional[Settings] = None,
     ):
         cfg = settings or get_settings()
         self.api_key = api_key or cfg.tavily_api_key
         self.max_results_default = min(max_results_default, cfg.max_searches_per_job * 3)
-        self.timeout = httpx.Timeout(timeout_seconds, connect=10.0)
+        self.timeout = httpx.Timeout(timeout_seconds, connect=6.0)
+        self._client: Optional[httpx.AsyncClient] = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Provide or initialize a shared AsyncClient with connection limits."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                timeout=self.timeout,
+                limits=httpx.Limits(max_keepalive_connections=15, max_connections=30),
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "ResearchOps/1.0 (Enterprise Market Intelligence)",
+                },
+            )
+        return self._client
+
+    async def close(self) -> None:
+        """Close underlying client session if open."""
+        if self._client and not self._client.is_closed:
+            await self._client.aclose()
+            self._client = None
 
     @property
     def is_configured(self) -> bool:
@@ -95,11 +116,16 @@ class TavilyClient:
 
         logger.debug("Executing Tavily search for: '%s' (limit: %d)", clean_query, limit)
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+        client = await self._get_client()
+
+        for attempt in range(2):
+            try:
                 response = await client.post(
                     TAVILY_SEARCH_URL,
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "ResearchOps/1.0",
+                    },
                     json=payload,
                 )
                 response.raise_for_status()
@@ -133,19 +159,30 @@ class TavilyClient:
                 logger.debug("Tavily returned %d normalized results for '%s'", len(normalized), clean_query)
                 return normalized
 
-        except httpx.TimeoutException as exc:
-            logger.error("Tavily search timed out for query '%s': %s", clean_query, str(exc))
-            raise TavilyError(f"Tavily search timed out after {self.timeout.read}s") from exc
+            except (httpx.TimeoutException, httpx.ConnectError) as exc:
+                if attempt == 0:
+                    logger.warning(
+                        "Tavily search attempt 1 failed with network/timeout error (%s); retrying in 1s for: '%s'",
+                        exc,
+                        clean_query,
+                    )
+                    await asyncio.sleep(1.0)
+                    continue
+                logger.error("Tavily search timed out for query '%s': %s", clean_query, str(exc))
+                raise TavilyError(f"Tavily search timed out after {self.timeout.read}s") from exc
 
-        except httpx.HTTPStatusError as exc:
-            status_code = exc.response.status_code
-            error_body = exc.response.text
-            logger.error("Tavily returned HTTP %d for query '%s': %s", status_code, clean_query, error_body)
-            raise TavilyError(f"Tavily HTTP error {status_code}: {error_body}") from exc
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code
+                error_body = exc.response.text
+                logger.error("Tavily returned HTTP %d for query '%s': %s", status_code, clean_query, error_body)
+                raise TavilyError(f"Tavily HTTP error {status_code}: {error_body}") from exc
 
-        except Exception as exc:
-            logger.error("Unexpected error during Tavily search: %s", str(exc))
-            raise TavilyError(f"Failed to communicate with Tavily search: {exc}") from exc
+            except TavilyError:
+                raise
+
+            except Exception as exc:
+                logger.error("Unexpected error during Tavily search: %s", str(exc))
+                raise TavilyError(f"Failed to communicate with Tavily search: {exc}") from exc
 
     async def search_to_sources(
         self,

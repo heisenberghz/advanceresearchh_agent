@@ -163,25 +163,32 @@ export const ResearchStudio: React.FC<ResearchStudioProps> = ({
                             return eMatch && dMatch;
                           }
                         );
+                        const isNotFound = !cell || !cell.value || cell.value.toLowerCase().includes("not found");
                         return (
                           <td key={entity} className="p-3.5 text-black border-r-2 border-black last:border-r-0 bg-white align-top">
                             {cell ? (
                               <div className="space-y-2">
                                 <div>
-                                  <span
-                                    className={`neo-stamp ${
-                                      cell.trust_tag === "GREEN"
-                                        ? "neo-stamp-green"
-                                        : cell.trust_tag === "YELLOW"
-                                        ? "neo-stamp-yellow"
-                                        : "neo-stamp-red"
-                                    }`}
-                                  >
-                                    {cell.trust_tag === "GREEN" ? "Verified" : cell.trust_tag === "YELLOW" ? "Single Source" : "Disputed"}
-                                  </span>
+                                  {isNotFound ? (
+                                    <span className="neo-stamp neo-stamp-gray">
+                                      Not Found
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`neo-stamp ${
+                                        cell.trust_tag === "GREEN"
+                                          ? "neo-stamp-green"
+                                          : cell.trust_tag === "YELLOW"
+                                          ? "neo-stamp-yellow"
+                                          : "neo-stamp-red"
+                                      }`}
+                                    >
+                                      {cell.trust_tag === "GREEN" ? "Verified" : cell.trust_tag === "YELLOW" ? "Single Source" : "Disputed"}
+                                    </span>
+                                  )}
                                 </div>
-                                <p className="text-xs sm:text-sm font-semibold text-black leading-relaxed break-words">
-                                  {cell.value}
+                                <p className={`text-xs sm:text-sm leading-relaxed break-words ${isNotFound ? "font-medium text-slate-500 italic" : "font-semibold text-black"}`}>
+                                  {isNotFound ? "Not available publicly" : cell.value}
                                 </p>
                               </div>
                             ) : (

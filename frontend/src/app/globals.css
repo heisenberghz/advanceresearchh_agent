@@ -209,6 +209,11 @@ body {
   color: #000000;
 }
 
+.neo-stamp-gray {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
 .neo-stamp-blue {
   background-color: #93c5fd;
   color: #000000;
